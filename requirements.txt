@@ -1,0 +1,25 @@
+# LLM and Generation
+groq
+langchain
+transformers
+
+# ML and Data Science
+scikit-learn
+pandas
+numpy
+matplotlib
+seaborn
+scipy
+
+# Project Management
+streamlit
+pyyaml
+python-dotenv
+jinja2
+
+
+# Evaluation and Metrics
+scikit-learn
+torch
+tensorflow
+

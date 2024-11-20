@@ -1,0 +1,24 @@
+project_types:
+  - recommendation_systems
+  - time_series_analysis
+  - nlp
+  - classification
+  - data_analytics
+  - computer_vision
+
+llm_providers:
+  - groq_llama3_70b
+  - groq_mixtral_8x7b
+  - groq_gemma_7b
+
+evaluation_metrics:
+  code_quality:
+    - complexity
+    - readability
+    - modularity
+  model_performance:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - confusion_matrix
