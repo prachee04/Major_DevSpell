@@ -1,44 +1,30 @@
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
-from langchain.runnables import Runnable  
-from src.generators.base_generator import BaseGenerator
 import os
 import pandas as pd
 import numpy as np
-
-class GroqRunnable(Runnable):
-    def __init__(self, api_key, model):
-        self.api_key = api_key
-        self.model = model
-
-    def _call(self, inputs: dict):
-        # This should match how Groq responds to calls for text generation
-        # Make Groq API call here and return the result in the required format.
-        # For example:
-        result = self.generate_code(inputs["task"])  # Assuming 'task' is the key
-        return result
-
-    def generate_code(self, task_description: str) -> str:
-        # You would add your Groq API call logic here.
-        # For simplicity, let's assume it takes the task_description and calls Groq's API.
-        response = groq_api_call(self.api_key, self.model, task_description)
-        return response['output']
-
-def groq_api_call(api_key, model, task_description):
-    # This is just a placeholder for actual Groq API interaction
-    # You need to replace it with actual API request logic
-    return {"output": f"Generated code for {task_description} with {model}"}
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+from src.generators.base_generator import BaseGenerator
+from langchain_groq import ChatGroq
 
 class NLPGenerator(BaseGenerator):
-    def __init__(self):
+    def __init__(self, groq_api_key=None):
+        """
+        Initialize the NLPGenerator with an optional API key for Groq.
+        
+        Args:
+            groq_api_key (str, optional): The API key for ChatGroq API. Defaults to None.
+        """
         super().__init__()
-        self.llm = GroqRunnable(api_key=os.getenv("GROQ_API_KEY"), model="llama-3.1-70b-versatile")
+        
+        # Initialize the LLM with ChatGroq API key if provided
+        if groq_api_key is None:
+            groq_api_key = os.getenv("GROQ_API_KEY")  # Fallback to environment variable if not provided
+        self.llm = ChatGroq(api_key=groq_api_key, model="llama-3.1-70b-versatile")
 
     def _preprocess_dataset(self, dataset):
         """
         Preprocess input dataset for NLP project
         """
-        # Dataset preprocessing logic (same as before)
         if isinstance(dataset, pd.DataFrame):
             df = dataset.copy()
         elif isinstance(dataset, str):
@@ -74,7 +60,6 @@ class NLPGenerator(BaseGenerator):
         """
         Generate NLP code files using LLM
         """
-        # Code generation logic (same as before)
         preprocessing_prompt = """
         Write a Python script for preprocessing text data for NLP tasks. 
         Ensure that the script handles missing values, tokenization, and basic cleaning. 

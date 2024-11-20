@@ -2,23 +2,21 @@ import os
 import streamlit as st
 import yaml
 from dotenv import load_dotenv
+import importlib
 
-# Import generators
-from src.generators import (
-    RecommendationGenerator,
-    TimeSeriesGenerator,
-    NLPGenerator,
-    ClassificationGenerator,
-    DataAnalyticsGenerator,
-    ComputerVisionGenerator
-)
-from src.evaluators.model_evaluator import ModelEvaluator
+# Import LLMSelector and ModelEvaluator (Make sure these paths are correct based on your folder structure)
 from src.utils.llm_selector import LLMSelector
+from src.evaluators.model_evaluator import ModelEvaluator
 
 class MLProjectGenerator:
     def __init__(self):
         # Load environment variables
         load_dotenv()
+        
+        # Fetch the Groq API key from environment variables
+        self.groq_api_key = os.getenv("GROQ_API_KEY")
+        if not self.groq_api_key:
+            raise ValueError("GROQ_API_KEY environment variable not set")
         
         # Load configuration
         with open('config.yaml', 'r') as file:
@@ -27,20 +25,38 @@ class MLProjectGenerator:
         # Initialize LLM Selector
         self.llm_selector = LLMSelector(self.config['llm_providers'])
         
-        # Initialize Generators
-        self.generators = {
-            'Recommendation Systems': RecommendationGenerator(),
-            'Time Series Analysis': TimeSeriesGenerator(),
-            'Natural Language Processing': NLPGenerator(),
-            'Classification': ClassificationGenerator(),
-            'Data Analytics': DataAnalyticsGenerator(),
-            'Computer Vision': ComputerVisionGenerator()
-        }
-        
         # Initialize Model Evaluator
         self.model_evaluator = ModelEvaluator()
-    
+
+        # Initialize empty generator dictionary for lazy loading
+        self.generators = {}
+
+    def load_generators(self):
+        """Lazy load the generators to avoid circular import issues."""
+        if not self.generators:  # Only load if not already loaded
+            # Dynamically import the generator classes using importlib
+            RecommendationGenerator = importlib.import_module('src.generators.recommendation_generator')
+            TimeSeriesGenerator = importlib.import_module('src.generators.time_series_generator')
+            NLPGenerator = importlib.import_module('src.generators.nlp_generator')
+            ClassificationGenerator = importlib.import_module('src.generators.classification_generator')
+            DataAnalyticsGenerator = importlib.import_module('src.generators.data_analytics_generator')
+            ComputerVisionGenerator = importlib.import_module('src.generators.computer_vision_generator')
+
+            # Initialize Generators with Groq API Key for relevant generators
+            self.generators = {
+                'Recommendation Systems': RecommendationGenerator.RecommendationGenerator(groq_api_key=self.groq_api_key),
+                'Time Series Analysis': TimeSeriesGenerator.TimeSeriesGenerator(groq_api_key=self.groq_api_key),
+                'Natural Language Processing': NLPGenerator.NLPGenerator(groq_api_key=self.groq_api_key),
+                'Classification': ClassificationGenerator.ClassificationGenerator(groq_api_key=self.groq_api_key),
+                'Data Analytics': DataAnalyticsGenerator.DataAnalyticsGenerator(groq_api_key=self.groq_api_key),
+                'Computer Vision': ComputerVisionGenerator.ComputerVisionGenerator(groq_api_key=self.groq_api_key)
+            }
+
     def run(self):
+        # Load the generators dynamically
+        self.load_generators()
+
+        # Streamlit page setup
         st.set_page_config(page_title="DevSpell AI", page_icon="🧙‍♂️")
         
         st.title("🪄 DevSpell AI: ML Project Generator")
@@ -52,7 +68,7 @@ class MLProjectGenerator:
         # Project Type Selection
         project_type = st.sidebar.selectbox(
             "Select Project Domain", 
-            list(self.generators.keys())
+            list(self.generators.keys())  # This will now have the project types after loading generators
         )
         
         # Dataset Upload
@@ -68,7 +84,7 @@ class MLProjectGenerator:
         )
         
         # Generate Projects Button
-        if st.sidebar.button("Generate Projects", type="primary"):
+        if st.sidebar.button("Generate Projects"):
             with st.spinner("Generating ML Projects..."):
                 # Validate inputs
                 if not selected_llms:
@@ -86,17 +102,18 @@ class MLProjectGenerator:
                 self.display_results(projects)
     
     def generate_projects(self, project_type, dataset, llms):
+        # Get the appropriate generator based on project type
         generator = self.generators[project_type]
         projects = {}
         
+        # Generate projects for each selected LLM
         for llm in llms:
             llm_client = self.llm_selector.get_llm(llm)
-            project = generator.generate(dataset, llm_client)  # Pass both dataset and llm_client
+            project = generator.generate(dataset)  # Pass both dataset and llm_client
             projects[llm] = project
         
         return projects
 
-    
     def display_results(self, projects):
         # Tabs for different views
         tab1, tab2 = st.tabs(["Project Details", "Model Performance"])

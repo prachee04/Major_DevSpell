@@ -10,14 +10,17 @@ numpy
 matplotlib
 seaborn
 scipy
+pydantic
 
 # Project Management
 streamlit
 pyyaml
 python-dotenv
 jinja2
-langchain==0.1.11
-langchain-community==0.1.11
+langchain>=0.1.11
+langchain_groq>=0.0.6
+langchain_community>=0.0.24
+langchain_core>=0.1.30
 
 # Evaluation and Metrics
 scikit-learn
