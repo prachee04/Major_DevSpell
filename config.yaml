@@ -1,24 +1,19 @@
-project_types:
-  - recommendation_systems
-  - time_series_analysis
-  - nlp
-  - classification
-  - data_analytics
-  - computer_vision
-
+# LLM Providers Configuration
 llm_providers:
   - groq_llama3_70b
   - groq_mixtral_8x7b
   - groq_gemma_7b
+  - openai_gpt4
+  - anthropic_claude
 
+# Project Generation Settings
+project_settings:
+  output_directory: results/generated_projects
+  sample_size: 3  # Number of sample projects to generate
+
+# Evaluation Metrics
 evaluation_metrics:
-  code_quality:
-    - complexity
-    - readability
-    - modularity
-  model_performance:
-    - accuracy
-    - precision
-    - recall
-    - f1_score
-    - confusion_matrix
+  - accuracy
+  - precision
+  - recall
+  - f1_score

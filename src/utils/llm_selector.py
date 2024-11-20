@@ -1,8 +1,12 @@
+import os
+from dotenv import load_dotenv  
 from groq import Groq
-import os 
 
 class LLMSelector:
     def __init__(self, llm_providers):
+        # Load environment variables
+        load_dotenv()
+        
         self.llm_providers = llm_providers
         self.clients = {
             'groq_llama3_70b': self._init_groq_llama3(),
@@ -11,22 +15,21 @@ class LLMSelector:
         }
     
     def _init_groq_llama3(self):
-        return Groq(
-            api_key=os.getenv('GROQ_API_KEY'),
-            model="llama3-70b-8192"
-        )
+        return Groq(api_key=os.getenv('GROQ_API_KEY'))
     
     def _init_groq_mixtral(self):
-        return Groq(
-            api_key=os.getenv('GROQ_API_KEY'),
-            model="mixtral-8x7b-32768"
-        )
+        return Groq(api_key=os.getenv('GROQ_API_KEY'))
     
     def _init_groq_gemma(self):
-        return Groq(
-            api_key=os.getenv('GROQ_API_KEY'),
-            model="gemma-7b-it"
-        )
+        return Groq(api_key=os.getenv('GROQ_API_KEY'))
     
     def get_llm(self, provider):
-        return self.clients.get(provider)
+        client = self.clients.get(provider)
+        
+        model_mapping = {
+            'groq_llama3_70b': "llama3-70b-8192",
+            'groq_mixtral_8x7b': "mixtral-8x7b-32768",
+            'groq_gemma_7b': "gemma-7b-it"
+        }
+        
+        return client, model_mapping.get(provider)
