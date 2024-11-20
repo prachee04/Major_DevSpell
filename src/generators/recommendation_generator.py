@@ -6,6 +6,59 @@ from sklearn.preprocessing import StandardScaler
 from src.generators.base_generator import BaseGenerator
 
 class RecommendationGenerator(BaseGenerator):
+    def _preprocess_dataset(self, dataset):
+        """
+        Preprocess input dataset supporting multiple file types
+        
+        Args:
+            dataset (str or pd.DataFrame or file-like object): Input dataset
+        
+        Returns:
+            pd.DataFrame: Preprocessed dataset
+        """
+        # If dataset is already a DataFrame, return it
+        if isinstance(dataset, pd.DataFrame):
+            return dataset
+        
+        # If dataset is a string (file path)
+        if isinstance(dataset, str):
+            # Check file exists
+            if not os.path.exists(dataset):
+                raise FileNotFoundError(f"Dataset file not found: {dataset}")
+            
+            # Get file extension
+            file_ext = os.path.splitext(dataset)[1].lower()
+            
+            # Read based on file type
+            try:
+                if file_ext == '.csv':
+                    return pd.read_csv(dataset)
+                elif file_ext == '.json':
+                    return pd.read_json(dataset)
+                else:
+                    raise ValueError(f"Unsupported file type: {file_ext}")
+            except Exception as e:
+                raise ValueError(f"Error reading dataset: {str(e)}")
+        
+        # Handle Streamlit uploaded file
+        if hasattr(dataset, 'type'):  # Streamlit file uploader check
+            file_ext = os.path.splitext(dataset.name)[1].lower()
+            
+            try:
+                if file_ext == '.csv':
+                    return pd.read_csv(dataset)
+                elif file_ext == '.json':
+                    return pd.read_json(dataset)
+                elif file_ext in ['.xls', '.xlsx']:
+                    return pd.read_excel(dataset)
+                else:
+                    raise ValueError(f"Unsupported file type: {file_ext}")
+            except Exception as e:
+                raise ValueError(f"Error reading Streamlit uploaded file: {str(e)}")
+        
+        # If not DataFrame, file path, or Streamlit file
+        raise TypeError("Dataset must be a file path, pandas DataFrame, or Streamlit uploaded file")
+
     def generate(self, dataset, llm):
         """
         Generate a recommendation system project
@@ -167,6 +220,92 @@ class CollaborativeFilteringRecommender:
 """
         return collaborative_filtering_code
     
+    def _generate_content_based_code(self):
+        """
+        Generate content-based recommendation code
+        
+        Returns:
+            str: Content-based recommendation implementation
+        """
+        content_based_code = """
+import numpy as np
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+class ContentBasedRecommender:
+    def __init__(self):
+        self.content_features = None
+        self.similarity_matrix = None
+    
+    def fit(self, content_data):
+        # Convert content features to TF-IDF matrix
+        vectorizer = TfidfVectorizer()
+        self.content_features = vectorizer.fit_transform(content_data)
+        
+        # Compute item similarity
+        self.similarity_matrix = cosine_similarity(self.content_features)
+    
+    def recommend(self, item_id, top_n=5):
+        # Find similar items
+        item_index = self.content_features.index(item_id)
+        similar_items = np.argsort(self.similarity_matrix[item_index])[::-1][1:top_n+1]
+        
+        return similar_items
+"""
+        return content_based_code
+    
+    def _generate_hybrid_recommender_code(self):
+        """
+        Generate hybrid recommendation code
+        
+        Returns:
+            str: Hybrid recommender implementation
+        """
+        hybrid_recommender_code = """
+import numpy as np
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+
+class HybridRecommender:
+    def __init__(self):
+        self.collaborative_matrix = None
+        self.content_features = None
+    
+    def fit(self, train_data, content_features):
+        # Collaborative filtering matrix
+        self.collaborative_matrix = train_data.pivot_table(
+            index='user_id', 
+            columns='item_id', 
+            values='rating'
+        ).fillna(0)
+        
+        # Content-based features
+        self.content_features = content_features
+    
+    def recommend(self, user_id, top_n=5):
+        # Combine collaborative and content-based recommendations
+        collaborative_scores = self._get_collaborative_recommendations(user_id)
+        content_scores = self._get_content_recommendations(user_id)
+        
+        # Hybrid scoring
+        hybrid_scores = (collaborative_scores + content_scores) / 2
+        
+        # Get top recommendations
+        recommendations = hybrid_scores.nlargest(top_n)
+        
+        return recommendations
+    
+    def _get_collaborative_recommendations(self, user_id):
+        # Collaborative filtering logic
+        pass
+    
+    def _get_content_recommendations(self, user_id):
+        # Content-based filtering logic
+        pass
+"""
+        return hybrid_recommender_code
+    
     def _generate_evaluation_script(self):
         """
         Generate model evaluation script
@@ -206,7 +345,7 @@ def evaluate_recommender(model, test_data):
 - Generated Files: {', '.join(code_files.keys())}
 
 ## Methodology
-Implemented recommendation system using collaborative filtering approach.
+Implemented recommendation system using hybrid approach.
 
 ## Next Steps
 1. Experiment with different recommendation algorithms
@@ -216,3 +355,38 @@ Implemented recommendation system using collaborative filtering approach.
         
         with open(os.path.join(project_dirs['docs'], 'project_report.md'), 'w') as f:
             f.write(report_content)
+
+    def _generate_content_based_code(self):
+        """
+        Generate content-based recommendation code
+        
+        Returns:
+            str: Content-based recommendation implementation
+        """
+        content_based_code = """
+import numpy as np
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+class ContentBasedRecommender:
+    def __init__(self):
+        self.content_features = None
+        self.similarity_matrix = None
+    
+    def fit(self, content_data):
+        # Convert content features to TF-IDF matrix
+        vectorizer = TfidfVectorizer()
+        self.content_features = vectorizer.fit_transform(content_data)
+        
+        # Compute item similarity
+        self.similarity_matrix = cosine_similarity(self.content_features)
+    
+    def recommend(self, item_id, top_n=5):
+        # Find similar items
+        item_index = self.content_features.index(item_id)
+        similar_items = np.argsort(self.similarity_matrix[item_index])[::-1][1:top_n+1]
+        
+        return similar_items
+"""
+        return content_based_code

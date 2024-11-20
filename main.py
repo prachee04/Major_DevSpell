@@ -91,10 +91,11 @@ class MLProjectGenerator:
         
         for llm in llms:
             llm_client = self.llm_selector.get_llm(llm)
-            project = generator.generate(dataset, llm_client)
+            project = generator.generate(dataset, llm_client)  # Pass both dataset and llm_client
             projects[llm] = project
         
         return projects
+
     
     def display_results(self, projects):
         # Tabs for different views

@@ -35,6 +35,117 @@ class TimeSeriesGenerator(BaseGenerator):
             'code_files': time_series_code
         }
     
+    def _preprocess_dataset(self, dataset):
+        """
+        Preprocess input dataset for time series analysis
+        
+        Args:
+            dataset (pd.DataFrame or str or Streamlit UploadedFile): Input dataset
+        
+        Returns:
+            pd.DataFrame: Preprocessed dataset
+        
+        Raises:
+            TypeError: If dataset is not a valid type
+            ValueError: If dataset cannot be processed
+        """
+        # Validate input type
+        if dataset is None:
+            raise ValueError("Dataset cannot be None")
+        
+        # Handle DataFrame input
+        if isinstance(dataset, pd.DataFrame):
+            df = dataset.copy()
+        
+        # Handle Streamlit UploadedFile
+        elif hasattr(dataset, 'type'):  # Streamlit UploadedFile check
+            try:
+                # Try reading with multiple methods based on file type
+                if dataset.type == 'text/csv':
+                    df = pd.read_csv(dataset)
+                elif dataset.type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']:
+                    df = pd.read_excel(dataset)
+                else:
+                    raise ValueError(f"Unsupported file type: {dataset.type}")
+            except Exception as e:
+                raise ValueError(f"Could not read Streamlit uploaded file: {e}")
+        
+        # Handle file path input
+        elif isinstance(dataset, str):
+            try:
+                # Try reading with multiple methods
+                try:
+                    df = pd.read_csv(dataset)
+                except Exception:
+                    try:
+                        df = pd.read_excel(dataset)
+                    except Exception:
+                        raise ValueError(f"Could not read dataset from {dataset}")
+            except FileNotFoundError:
+                raise ValueError(f"Dataset file not found: {dataset}")
+        
+        # Reject other input types
+        else:
+            raise TypeError(f"Dataset must be a file path, pandas DataFrame, or Streamlit UploadedFile. Got {type(dataset)}")
+        
+        # Validate DataFrame
+        if df.empty:
+            raise ValueError("Input dataset is empty")
+        
+        # Basic preprocessing steps
+        # Attempt to convert timestamp/date column
+        date_columns = [col for col in df.columns if any(x in col.lower() for x in ['date', 'time', 'timestamp'])]
+        
+        if date_columns:
+            date_col = date_columns[0]
+            try:
+                df[date_col] = pd.to_datetime(df[date_col])
+                df.sort_values(by=date_col, inplace=True)
+            except Exception as e:
+                print(f"Warning: Could not convert date column {date_col}: {e}")
+        
+        # Remove duplicate rows
+        df.drop_duplicates(inplace=True)
+        
+        # Remove rows with all NaN values
+        df.dropna(how='all', inplace=True)
+        
+        # Fill remaining NaNs with appropriate method
+        for col in df.select_dtypes(include=[np.number]).columns:
+            df[col].fillna(df[col].mean(), inplace=True)
+        
+        # Reset index after preprocessing
+        df.reset_index(drop=True, inplace=True)
+        
+        return df
+    
+    def _generate_project_structure(self, project_name):
+        """
+        Generate project directory structure
+        
+        Args:
+            project_name (str): Name of the project
+        
+        Returns:
+            dict: Project directory paths
+        """
+        base_dir = os.path.join(os.getcwd(), project_name)
+        
+        # Create project directory structure
+        dirs = {
+            'root': base_dir,
+            'src': os.path.join(base_dir, 'src'),
+            'data': os.path.join(base_dir, 'data'),
+            'docs': os.path.join(base_dir, 'docs'),
+            'tests': os.path.join(base_dir, 'tests')
+        }
+        
+        # Create directories
+        for dir_path in dirs.values():
+            os.makedirs(dir_path, exist_ok=True)
+        
+        return dirs
+    
     def _generate_time_series_code(self, df, project_dirs):
         """
         Generate time series analysis implementation
@@ -48,6 +159,9 @@ class TimeSeriesGenerator(BaseGenerator):
         """
         # Identify time series characteristics
         time_series_type = self._determine_time_series_type(df)
+        
+        # Save preprocessed dataset
+        df.to_csv(os.path.join(project_dirs['data'], 'time_series_data.csv'), index=False)
         
         code_files = {
             'data_preprocessing.py': self._generate_preprocessing_script(df, project_dirs),
@@ -75,10 +189,15 @@ class TimeSeriesGenerator(BaseGenerator):
             str: Time series analysis type
         """
         # Basic heuristics to determine time series type
-        if 'timestamp' in df.columns:
+        date_columns = [col for col in df.columns if 'date' in col.lower() or 'time' in col.lower()]
+        
+        if date_columns:
+            # Check for financial indicators
+            financial_indicators = ['open', 'close', 'high', 'low', 'volume', 'price']
+            if any(indicator in df.columns for indicator in financial_indicators):
+                return 'financial_time_series'
+            
             return 'regular_time_series'
-        elif 'date' in df.columns and 'value' in df.columns:
-            return 'financial_time_series'
         else:
             return 'generic_time_series'
     
@@ -93,23 +212,26 @@ from sklearn.preprocessing import MinMaxScaler
 
 def preprocess_time_series(df):
     # Convert timestamp/date column
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    df.set_index('timestamp', inplace=True)
+    date_columns = [col for col in df.columns if 'date' in col.lower() or 'time' in col.lower()]
+    if date_columns:
+        date_col = date_columns[0]
+        df[date_col] = pd.to_datetime(df[date_col])
+        df.set_index(date_col, inplace=True)
     
     # Handle missing values
     df.interpolate(method='time', inplace=True)
     
     # Normalization
+    numeric_columns = df.select_dtypes(include=[np.number]).columns
     scaler = MinMaxScaler()
-    df_scaled = pd.DataFrame(scaler.fit_transform(df), 
-                              columns=df.columns, 
-                              index=df.index)
+    df[numeric_columns] = scaler.fit_transform(df[numeric_columns])
     
-    return df_scaled, scaler
+    return df, scaler
 
 # Load and process data
 df = pd.read_csv('{project_dirs["data"]}/time_series_data.csv')
 processed_df, scaler = preprocess_time_series(df)
+processed_df.to_csv('{project_dirs["data"]}/processed_time_series_data.csv')
 """
         return preprocessing_script
     

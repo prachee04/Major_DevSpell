@@ -27,19 +27,22 @@ class BaseGenerator(ABC):
         """
         pass
     
-    import pandas as pd
-    import os
+        import pandas as pd
+        import os
 
-    def _preprocess_dataset(self, dataset):
-        """
-        Preprocess input dataset supporting multiple file types
-        
-        Args:
-            dataset (str or pd.DataFrame): Input dataset
-        
-        Returns:
-            pd.DataFrame: Preprocessed dataset
-        """
+        def _preprocess_dataset(self, dataset):
+            """
+            Preprocess input dataset supporting multiple file types
+            
+            Args:
+                dataset (str or pd.DataFrame or file-like object): Input dataset
+            
+            Returns:
+                pd.DataFrame: Preprocessed dataset
+            """
+        import pandas as pd
+        import os
+
         # If dataset is already a DataFrame, return it
         if isinstance(dataset, pd.DataFrame):
             return dataset
@@ -64,8 +67,24 @@ class BaseGenerator(ABC):
             except Exception as e:
                 raise ValueError(f"Error reading dataset: {str(e)}")
         
-        # If not DataFrame or file path
-        raise TypeError("Dataset must be a file path or pandas DataFrame")
+        # Handle Streamlit uploaded file
+        if hasattr(dataset, 'type'):  # Streamlit file uploader check
+            file_ext = os.path.splitext(dataset.name)[1].lower()
+            
+            try:
+                if file_ext == '.csv':
+                    return pd.read_csv(dataset)
+                elif file_ext == '.json':
+                    return pd.read_json(dataset)
+                elif file_ext in ['.xls', '.xlsx']:
+                    return pd.read_excel(dataset)
+                else:
+                    raise ValueError(f"Unsupported file type: {file_ext}")
+            except Exception as e:
+                raise ValueError(f"Error reading Streamlit uploaded file: {str(e)}")
+        
+        # If not DataFrame, file path, or Streamlit file
+        raise TypeError("Dataset must be a file path, pandas DataFrame, or Streamlit uploaded file")
     
     def _generate_project_structure(self, project_name):
         """
