@@ -1,300 +1,240 @@
 import os
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from src.generators.base_generator import BaseGenerator
+from langchain_groq import ChatGroq
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 
-class ComputerVisionGenerator(BaseGenerator):
-    def generate(self, dataset, llm):
-        """
-        Generate a computer vision project
+class ComputerVisionGenerator:
+    def __init__(self, groq_api_key):
+        """Initialize with Groq API"""
+        self.llm = ChatGroq(
+            groq_api_key=groq_api_key,
+            model_name="llama-3.1-70b-versatile",
+            temperature=0.7,
+        )
+
+    def _preprocess_dataset(self, dataset):
+        """Preprocess the dataset: Either a pandas DataFrame or uploaded file"""
+        # If dataset is a pandas DataFrame, return it as-is
+        if isinstance(dataset, pd.DataFrame):
+            return dataset
+
+        # If dataset is a string (file path), process it
+        if isinstance(dataset, str):
+            if not os.path.exists(dataset):
+                raise FileNotFoundError(f"Dataset file not found: {dataset}")
+
+            file_ext = os.path.splitext(dataset)[1].lower()
+            try:
+                if file_ext == ".csv":
+                    return pd.read_csv(dataset)
+                elif file_ext == ".json":
+                    return pd.read_json(dataset)
+                elif file_ext in [".xls", ".xlsx"]:
+                    return pd.read_excel(dataset)
+                else:
+                    raise ValueError(f"Unsupported file type: {file_ext}")
+            except Exception as e:
+                raise ValueError(f"Error reading dataset: {str(e)}")
+
+        # Handle file-like objects (e.g., Streamlit uploads)
+        if hasattr(dataset, "name"):
+            file_ext = os.path.splitext(dataset.name)[1].lower()
+            try:
+                if file_ext == ".csv":
+                    return pd.read_csv(dataset)
+                elif file_ext == ".json":
+                    return pd.read_json(dataset)
+                elif file_ext in [".xls", ".xlsx"]:
+                    return pd.read_excel(dataset)
+                else:
+                    raise ValueError(f"Unsupported file type: {file_ext}")
+            except Exception as e:
+                raise ValueError(f"Error reading file-like object: {str(e)}")
+
+        raise TypeError("Dataset must be a file path (CSV/JSON), DataFrame, or file-like object")
+
+    def _generate_code(self, prompt_template, **kwargs):
+        """Generate code using LLMChain with error handling"""
+        try:
+            prompt = PromptTemplate.from_template(prompt_template)
+            
+            input_vars = prompt.input_variables
+            inputs = {}
+            
+            for var in input_vars:
+                inputs[var] = kwargs.get(var, f"Default {var} content")
+            
+            chain = LLMChain(llm=self.llm, prompt=prompt)
+            return chain.run(**inputs)
         
-        Args:
-            dataset (pd.DataFrame or str): Input dataset
-            llm (object): Language model for code generation
+        except Exception as e:
+            print(f"Error generating code: {e}")
+            return f"# Error generating code\n# {str(e)}\n\n# Placeholder code"
+
+    def _generate_project_structure(self, project_name):
+        """Generate project directory structure"""
+        base_dir = os.path.join(os.getcwd(), project_name)
+        dirs = {
+            "root": base_dir,
+            "src": os.path.join(base_dir, "src"),
+            "data": os.path.join(base_dir, "data"),
+            "models": os.path.join(base_dir, "models"),
+            "docs": os.path.join(base_dir, "docs"),
+            "results": os.path.join(base_dir, "results"),
+            "images": os.path.join(base_dir, "images")
+        }
+        for dir_path in dirs.values():
+            os.makedirs(dir_path, exist_ok=True)
+        return dirs
+
+    def _analyze_cv_dataset(self, df):
+        """Analyze Computer Vision dataset characteristics"""
+        # Check for image-related columns
+        image_cols = [col for col in df.columns if col.lower() in ['image_path', 'image', 'filename', 'file']]
         
-        Returns:
-            dict: Project details and generated code
-        """
-        # Preprocess dataset
-        df = self._preprocess_dataset(dataset)
-        
-        # Generate project structure
-        project_name = f"computer_vision_{np.random.randint(1000, 9999)}"
-        project_dirs = self._generate_project_structure(project_name)
-        
-        # Generate computer vision project code
-        cv_code = self._generate_computer_vision_code(df, project_dirs)
-        
-        # Generate project report
-        self._generate_project_report(project_dirs, cv_code)
+        # Check for label/class columns
+        label_cols = [col for col in df.columns if col.lower() in ['label', 'class', 'category', 'target']]
         
         return {
-            'project_name': project_name,
-            'project_type': 'Computer Vision',
-            'directories': project_dirs,
-            'code_files': cv_code
+            "image_columns": image_cols,
+            "label_columns": label_cols,
+            "total_samples": len(df),
+            "cv_task": self._determine_cv_task(df, label_cols)
         }
-    
-    def _preprocess_dataset(self, dataset):
-        """
-        Preprocess input dataset for computer vision task
+
+    def _determine_cv_task(self, df, label_cols):
+        """Determine the type of computer vision task"""
+        if not label_cols:
+            return "image_generation"
         
-        Args:
-            dataset (pd.DataFrame or str): Input dataset
+        unique_labels = df[label_cols[0]].nunique() if label_cols else 0
         
-        Returns:
-            pd.DataFrame: Preprocessed dataset
-        """
-        if isinstance(dataset, str):
-            df = pd.read_csv(dataset)
-        elif isinstance(dataset, pd.DataFrame):
-            df = dataset.copy()
+        if unique_labels == 2:
+            return "binary_classification"
+        elif unique_labels > 2:
+            return "multi_class_classification"
         else:
-            raise ValueError("Dataset must be a file path or pandas DataFrame")
-        
-        return df
-    
-    def _generate_project_structure(self, project_name):
-        """
-        Create project directory structure
-        
-        Args:
-            project_name (str): Name of the project
-        
-        Returns:
-            dict: Project directory paths
-        """
-        base_dir = os.path.join('projects', project_name)
-        
-        project_dirs = {
-            'root': base_dir,
-            'src': os.path.join(base_dir, 'src'),
-            'data': os.path.join(base_dir, 'data'),
-            'models': os.path.join(base_dir, 'models'),
-            'docs': os.path.join(base_dir, 'docs'),
-            'tests': os.path.join(base_dir, 'tests')
-        }
-        
-        # Create directories
-        for dir_path in project_dirs.values():
-            os.makedirs(dir_path, exist_ok=True)
-        
-        return project_dirs
-    
-    def _generate_computer_vision_code(self, df, project_dirs):
-        """
-        Generate computer vision project implementation
-        
-        Args:
-            df (pd.DataFrame): Preprocessed dataset
-            project_dirs (dict): Project directory paths
-        
-        Returns:
-            dict: Generated code files
-        """
-        # Determine computer vision task type
-        cv_task = self._determine_computer_vision_task(df)
-        
-        # Generate code files
+            return "object_detection"
+
+    def generate(self, dataset):
+        """Generate complete computer vision project"""
+        df = self._preprocess_dataset(dataset)
+        project_name = f"computer_vision_{np.random.randint(1000, 9999)}"
+        project_dirs = self._generate_project_structure(project_name)
+
+        # Ensure the results folder exists
+        results_dir = project_dirs["results"]
+        os.makedirs(results_dir, exist_ok=True)
+
+        cv_info = self._analyze_cv_dataset(df)
+
+        # Generate all code components
         code_files = {}
-        
-        # Data preprocessing script
-        code_files['data_preprocessing.py'] = self._generate_preprocessing_script(df, project_dirs)
-        
-        # Model implementation scripts based on task
-        if cv_task == 'classification':
-            code_files['image_classifier.py'] = self._generate_classification_code()
-        elif cv_task == 'object_detection':
-            code_files['object_detector.py'] = self._generate_object_detection_code()
-        elif cv_task == 'segmentation':
-            code_files['image_segmentation.py'] = self._generate_segmentation_code()
-        
-        # Evaluation script
-        code_files['model_evaluation.py'] = self._generate_evaluation_script()
-        
-        # Save code files
-        for filename, code_content in code_files.items():
-            file_path = os.path.join(project_dirs['src'], filename)
-            with open(file_path, 'w') as f:
-                f.write(code_content)
-        
-        return code_files
-    
-    def _determine_computer_vision_task(self, df):
-        """
-        Determine computer vision task type based on dataset
-        
-        Args:
-            df (pd.DataFrame): Input dataset
-        
-        Returns:
-            str: Computer vision task type
-        """
-        # Basic heuristics to determine CV task
-        if 'label' in df.columns and 'image_path' in df.columns:
-            return 'classification'
-        elif 'bounding_box' in df.columns:
-            return 'object_detection'
-        elif 'segmentation_mask' in df.columns:
-            return 'segmentation'
-        else:
-            return 'classification'  # Default to classification
-    
-    def _generate_preprocessing_script(self, df, project_dirs):
-        """
-        Generate data preprocessing script for computer vision
-        
-        Returns:
-            str: Python script for data preprocessing
-        """
-        preprocessing_script = f"""
-import os
-import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-def preprocess_images(df, img_size=(224, 224)):
-    # Image data generator for augmentation
-    datagen = ImageDataGenerator(
-        rescale=1./255,
-        rotation_range=20,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        shear_range=0.2,
-        zoom_range=0.2,
-        horizontal_flip=True
-    )
-    
-    # Split data
-    train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
-    
-    return train_df, test_df, datagen
-
-# Load dataset
-df = pd.read_csv('{project_dirs["data"]}/image_metadata.csv')
-train_data, test_data, image_generator = preprocess_images(df)
-"""
-        return preprocessing_script
-    
-    def _generate_classification_code(self):
+        # Data Preprocessing Script
+        preprocessing_prompt = """
+        Create a comprehensive image preprocessing script.
+        CV Task: {cv_task}
+        Total Samples: {total_samples}
+        Image Columns: {image_columns}
+        Label Columns: {label_columns}
+        Include:
+        - Image augmentation
+        - Resize/normalize
+        - Data loading pipeline
+        - Train-test split
         """
-        Generate image classification code
-        
-        Returns:
-            str: Image classification implementation
-        """
-        classification_code = """
-import tensorflow as tf
-from tensorflow.keras.applications import ResNet50
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
-from tensorflow.keras.models import Model
-
-class ImageClassifier:
-    def __init__(self, num_classes):
-        self.num_classes = num_classes
-        self.model = self._build_model()
-    
-    def _build_model(self):
-        # Pre-trained ResNet50 as base
-        base_model = ResNet50(
-            weights='imagenet', 
-            include_top=False, 
-            input_shape=(224, 224, 3)
+        code_files["data_preprocessing.py"] = self._generate_code(
+            preprocessing_prompt, 
+            cv_task=cv_info["cv_task"],
+            total_samples=cv_info["total_samples"],
+            image_columns=str(cv_info["image_columns"]),
+            label_columns=str(cv_info["label_columns"])
         )
-        
-        # Freeze base model layers
-        for layer in base_model.layers:
-            layer.trainable = False
-        
-        # Add classification layers
-        x = base_model.output
-        x = GlobalAveragePooling2D()(x)
-        x = Dense(1024, activation='relu')(x)
-        predictions = Dense(self.num_classes, activation='softmax')(x)
-        
-        model = Model(inputs=base_model.input, outputs=predictions)
-        
-        # Compile model
-        model.compile(
-            optimizer='adam', 
-            loss='categorical_crossentropy', 
-            metrics=['accuracy']
-        )
-        
-        return model
-    
-    def train(self, train_generator, validation_generator, epochs=10):
-        history = self.model.fit(
-            train_generator,
-            validation_data=validation_generator,
-            epochs=epochs
-        )
-        return history
-"""
-        return classification_code
-    
-    def _generate_evaluation_script(self):
-        """
-        Generate model evaluation script
-        
-        Returns:
-            str: Evaluation implementation
-        """
-        evaluation_script = """
-from sklearn.metrics import classification_report, confusion_matrix
-import seaborn as sns
-import matplotlib.pyplot as plt
 
-def evaluate_model(model, test_generator):
-    # Predict on test data
-    predictions = model.predict(test_generator)
-    true_labels = test_generator.classes
-    
-    # Classification report
-    class_report = classification_report(
-        true_labels, 
-        predictions.argmax(axis=1)
-    )
-    
-    # Confusion matrix visualization
-    cm = confusion_matrix(true_labels, predictions.argmax(axis=1))
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-    plt.title('Confusion Matrix')
-    plt.ylabel('True Label')
-    plt.xlabel('Predicted Label')
-    plt.tight_layout()
-    plt.savefig('confusion_matrix.png')
-    
-    return class_report
-"""
-        return evaluation_script
-    
-    def _generate_project_report(self, project_dirs, code_files):
+        # Model Architecture Script
+        model_prompt = """
+        Create a neural network architecture script.
+        CV Task: {cv_task}
+        Include architectures:
+        - CNN
+        - Transfer Learning (ResNet/VGG)
+        - Data Augmentation strategies
         """
-        Generate project report and documentation
-        
-        Args:
-            project_dirs (dict): Project directory paths
-            code_files (dict): Generated code files
+        code_files["model_architecture.py"] = self._generate_code(
+            model_prompt,
+            cv_task=cv_info["cv_task"]
+        )
+
+        # Training Script
+        training_prompt = """
+        Create a model training script.
+        CV Task: {cv_task}
+        Training techniques:
+        - Learning rate scheduling
+        - Early stopping
+        - Model checkpointing
         """
+        code_files["model_training.py"] = self._generate_code(
+            training_prompt,
+            cv_task=cv_info["cv_task"]
+        )
+
+        # Evaluation Script
+        eval_prompt = """
+        Create a model evaluation script.
+        Metrics to include:
+        - Accuracy
+        - Precision
+        - Recall
+        - F1-Score
+        - Confusion Matrix
+        - ROC Curve
+        """
+        code_files["model_evaluation.py"] = self._generate_code(eval_prompt)
+
+        # Inference Script
+        inference_prompt = """
+        Create an inference script for:
+        - Single image prediction
+        - Batch prediction
+        - Model serving
+        """
+        code_files["inference.py"] = self._generate_code(inference_prompt)
+
+        # Write files to the results folder
+        for filename, content in code_files.items():
+            file_path = os.path.join(results_dir, filename)
+            with open(file_path, "w") as f:
+                f.write(content)
+
+        # Generate project report
         report_content = f"""
 # Computer Vision Project
 
 ## Project Overview
-- Type: Computer Vision
-- Generated Files: {', '.join(code_files.keys())}
+Generated Files:
+{', '.join(code_files.keys())}
 
-## Methodology
-Implemented computer vision project focusing on image classification/object detection.
+## Dataset Characteristics
+- Total Samples: {cv_info["total_samples"]}
+- CV Task: {cv_info["cv_task"]}
+- Image Columns: {cv_info["image_columns"]}
+- Label Columns: {cv_info["label_columns"]}
 
 ## Next Steps
-1. Experiment with different neural network architectures
-2. Fine-tune hyperparameters
-3. Collect more diverse training data
+1. Review generated scripts
+2. Validate data preprocessing
+3. Train and fine-tune models
 """
-        
-        with open(os.path.join(project_dirs['docs'], 'project_report.md'), 'w') as f:
+        with open(os.path.join(project_dirs["docs"], "project_report.md"), "w") as f:
             f.write(report_content)
+
+        return {
+            "project_name": project_name,
+            "cv_info": cv_info,
+            "directories": project_dirs,
+            "code_files": code_files,
+        }
