@@ -3,10 +3,13 @@ import streamlit as st
 import yaml
 from dotenv import load_dotenv
 import importlib
-
+import pandas as pd
+import numpy as np
+import matplotlib as plt
 # Import LLMSelector and ModelEvaluator (Make sure these paths are correct based on your folder structure)
 from src.utils.llm_selector import LLMSelector
 from src.evaluators.model_evaluator import ModelEvaluator
+from src.evaluators.recommendation_model_evaluator import RecommendationModelEvaluator
 
 class MLProjectGenerator:
     def __init__(self):
@@ -102,21 +105,50 @@ class MLProjectGenerator:
                 self.display_results(projects)
     
     def generate_projects(self, project_type, dataset, llms):
-        # Get the appropriate generator based on project type
         generator = self.generators[project_type]
         projects = {}
         
-        # Generate projects for each selected LLM
+        # Ensure dataset is processed correctly
+        processed_dataset = None
+        if dataset is not None:
+            try:
+                # Use the generator's preprocessing method
+                processed_dataset = generator._preprocess_dataset(dataset)
+                
+                if processed_dataset.empty:
+                    st.warning("The uploaded dataset is empty. Proceeding with minimal data.")
+            except Exception as e:
+                st.error(f"Error processing dataset: {e}")
+                return {}
+
         for llm in llms:
             llm_client = self.llm_selector.get_llm(llm)
-            project = generator.generate(dataset)  # Pass both dataset and llm_client
-            projects[llm] = project
+            
+            try:
+                # Generate project, passing the processed dataset
+                project = generator.generate(processed_dataset)
+                
+                # Ensure project is a dictionary
+                if not isinstance(project, dict):
+                    project = {}
+
+                # Add necessary details
+                project.update({
+                    'project_name': f"{project_type} Project",
+                    'recommendation_type': project_type,
+                    'dataset': processed_dataset,  # Add processed dataset to project details
+                    'llm': llm
+                })
+                
+                projects[llm] = project
+            except Exception as e:
+                st.error(f"Error generating project for {llm}: {e}")
         
         return projects
 
     def display_results(self, projects):
         # Tabs for different views
-        tab1, tab2 = st.tabs(["Project Details", "Model Performance"])
+        tab1, tab2, tab3 = st.tabs(["Project Details", "Model Performance", "Comparative Metrics"])
         
         with tab1:
             st.header("Generated Projects")
@@ -125,10 +157,28 @@ class MLProjectGenerator:
                 st.json(project)
         
         with tab2:
-            # Model Performance Comparison
-            performance_results = self.model_evaluator.evaluate(projects)
-            self.visualize_results(performance_results)
-    
+            st.header("Model Evaluation")
+            # Iterate through projects and evaluate models
+            model_metrics = {}
+            for llm, project in projects.items():
+                try:
+                    # Ensure dataset is present and not None
+                    dataset = project.get('dataset')
+                    if dataset is None or (isinstance(dataset, pd.DataFrame) and dataset.empty):
+                        st.warning(f"No valid dataset available for {llm}")
+                        continue
+                    
+                    # Create a copy of the project to avoid modifying the original
+                    project_copy = project.copy()
+                    project_copy['dataset'] = dataset
+                    
+                    evaluator = RecommendationModelEvaluator(project_copy)
+                    metrics = evaluator.evaluate_model(model_name=llm)
+                    if metrics:
+                        model_metrics[llm] = metrics
+                except Exception as e:
+                    st.error(f"Error evaluating model for {llm}: {e}")
+        
     def visualize_results(self, results):
         # Detailed visualization of results
         st.header("Model Performance Comparison")

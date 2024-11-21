@@ -2,10 +2,13 @@ import os
 import pandas as pd
 import numpy as np
 import io
+import streamlit as st
 from langchain_groq import ChatGroq
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-
+from src.evaluators.recommendation_model_evaluator import RecommendationModelEvaluator
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 class RecommendationGenerator:
     def __init__(self, groq_api_key):
@@ -200,3 +203,60 @@ Generated Files:
 """
         with open(os.path.join(project_dirs["docs"], "project_report.md"), "w") as f:
             f.write(report_content)
+
+    def generate_projects(self, project_type, dataset, llms):
+        generator = self.generators[project_type]
+        projects = {}
+
+        processed_dataset = self._preprocess_dataset(dataset)
+        
+        for llm in llms:
+            try:
+                project = generator.generate(processed_dataset)
+                project_details = {
+                    'project_name': project['name'],
+                    'dataset': processed_dataset,
+                    'true_labels': project['true_labels']
+                }
+
+                # Instantiate evaluator
+                evaluator = RecommendationModelEvaluator(project_details)
+                metrics = evaluator.evaluate_model()
+
+                # Ensure the metrics are being returned
+                if metrics:
+                    st.write(f"### Evaluation Results for {project['name']}")
+                    st.write(f"Accuracy: {metrics['accuracy'] * 100:.2f}%")
+                    st.write(f"Precision: {metrics['precision'] * 100:.2f}%")
+                    st.write(f"Recall: {metrics['recall'] * 100:.2f}%")
+                    st.write(f"F1 Score: {metrics['f1_score'] * 100:.2f}%")
+
+                    # Visualization
+                    metrics_df = pd.DataFrame(list(metrics.items()), columns=["Metric", "Value"])
+                    st.write("### Model Performance Metrics")
+                    st.bar_chart(metrics_df.set_index("Metric")["Value"])
+                else:
+                    st.write("Metrics not available.")
+
+                # Store the project
+                projects[project['name']] = project
+
+            except Exception as e:
+                st.error(f"Error generating project with LLM {llm}: {e}")
+
+        return projects
+
+
+
+    def plot_metrics(self, metrics):
+        # Create a bar plot for the evaluation metrics
+        metric_names = list(metrics.keys())
+        metric_values = list(metrics.values())
+
+        # Plot using seaborn or matplotlib
+        plt.figure(figsize=(10, 6))
+        sns.barplot(x=metric_names, y=metric_values, palette="viridis")
+        plt.title("Model Evaluation Metrics")
+        plt.ylabel("Score")
+        plt.xlabel("Metric")
+        st.pyplot(plt)
