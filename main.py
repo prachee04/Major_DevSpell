@@ -173,7 +173,7 @@ class MLProjectGenerator:
                     project_copy['dataset'] = dataset
                     
                     evaluator = RecommendationModelEvaluator(project_copy)
-                    metrics = evaluator.evaluate_model(model_name=llm)
+                    metrics = evaluator.evaluate_model(model_name='groq_llama3_70b')
                     if metrics:
                         model_metrics[llm] = metrics
                 except Exception as e:

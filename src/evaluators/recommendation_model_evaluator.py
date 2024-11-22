@@ -74,17 +74,29 @@ class RecommendationModelEvaluator:
         # Train-test split
         return train_test_split(X_scaled, y, test_size=0.2, random_state=42)
 
-    def evaluate_model(self):
+    def evaluate_model(self, model_name=None):
+        st.write(f"Evaluating model: {model_name}" if model_name else "Evaluating model")
+
         # Simulated evaluation metrics
         accuracy = 0.85
         precision = 0.8
         recall = 0.75
         f1 = 0.77
 
-        # Debug print
-        print(f"Metrics: accuracy={accuracy}, precision={precision}, recall={recall}, f1={f1}")
+        # Display the metrics in the Streamlit app
+        st.write("### Evaluation Metrics")
+        st.write(f"Accuracy: {accuracy * 100:.2f}%")
+        st.write(f"Precision: {precision * 100:.2f}%")
+        st.write(f"Recall: {recall * 100:.2f}%")
+        st.write(f"F1 Score: {f1 * 100:.2f}%")
 
-        # Return the metrics
+        # Visualize metrics
+        metrics_df = pd.DataFrame({
+            'Metric': ['Accuracy', 'Precision', 'Recall', 'F1 Score'],
+            'Value': [accuracy, precision, recall, f1]
+        })
+        st.bar_chart(metrics_df.set_index('Metric'))
+
         return {
             'accuracy': accuracy,
             'precision': precision,
