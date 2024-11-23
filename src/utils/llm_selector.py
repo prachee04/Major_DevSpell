@@ -13,10 +13,10 @@ class LLMSelector:
             # Add more Groq LLMs
         }
     
-    def get_llm(self, provider_name, api_key):
-        model_name = self.providers.get(provider_name)
+    def get_llm(self, api_key, model):
+        
         return ChatGroq(
             groq_api_key=api_key,
-            model_name=model_name,
+            model_name=model,
             temperature=0.7
         )

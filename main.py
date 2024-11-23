@@ -123,7 +123,7 @@ class MLProjectGenerator:
                 return {}
 
         for llm in llms:
-            llm_client = self.llm_selector.get_llm(llm,api_key=self.groq_api_key)
+            llm_client = self.llm_selector.get_llm(api_key=self.groq_api_key,model = llm)
             
             try:
                 # Generate project, passing the processed dataset
