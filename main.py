@@ -34,7 +34,7 @@ class MLProjectGenerator:
         # Initialize empty generator dictionary for lazy loading
         self.generators = {}
 
-    def load_generators(self):
+    def load_generators(self, llm_selector):
         """Lazy load the generators to avoid circular import issues."""
         if not self.generators:  # Only load if not already loaded
             # Dynamically import the generator classes using importlib
@@ -47,18 +47,26 @@ class MLProjectGenerator:
 
             # Initialize Generators with Groq API Key for relevant generators
             self.generators = {
+<<<<<<< Updated upstream
                 'Recommendation Systems': RecommendationGenerator.RecommendationGenerator(groq_api_key=self.groq_api_key),
                 'Time Series Analysis': TimeSeriesGenerator.TimeSeriesGenerator(groq_api_key=self.groq_api_key),
                 'Natural Language Processing': NLPGenerator.NLPGenerator(groq_api_key=self.groq_api_key),
                 'Classification': ClassificationGenerator.ClassificationGenerator(groq_api_key=self.groq_api_key),
                 # 'Data Analytics': DataAnalyticsGenerator.DataAnalyticsGenerator(groq_api_key=self.groq_api_key),
                 'Computer Vision': ComputerVisionGenerator.ComputerVisionGenerator(groq_api_key=self.groq_api_key)
+=======
+                'Recommendation Systems': RecommendationGenerator.RecommendationGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
+                'Time Series Analysis': TimeSeriesGenerator.TimeSeriesGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
+                'Natural Language Processing': NLPGenerator.NLPGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
+                'Classification': ClassificationGenerator.ClassificationGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
+                'Data Analytics': DataAnalyticsGenerator.DataAnalyticsGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
+                'Computer Vision': ComputerVisionGenerator.ComputerVisionGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
+>>>>>>> Stashed changes
             }
 
     def run(self):
         # Load the generators dynamically
-        self.load_generators()
-
+        
         # Streamlit page setup
         st.set_page_config(page_title="DevSpell AI", page_icon="🧙‍♂️")
         
@@ -67,43 +75,49 @@ class MLProjectGenerator:
         
         # Sidebar for configuration
         st.sidebar.header("Project Configuration")
-        
-        # Project Type Selection
-        project_type = st.sidebar.selectbox(
-            "Select Project Domain", 
-            list(self.generators.keys())  # This will now have the project types after loading generators
-        )
-        
-        # Dataset Upload
-        uploaded_dataset = st.sidebar.file_uploader(
-            "Upload Dataset", 
-            type=['csv', 'json', 'xlsx']
-        )
-        
-        # LLM Selection
         selected_llms = st.sidebar.multiselect(
             "Select LLMs for Comparison", 
+<<<<<<< Updated upstream
             self.config['llm_providers']
 
+=======
+            self.config['llm_providers'],
+             
+>>>>>>> Stashed changes
         )
-        
-        # Generate Projects Button
-        if st.sidebar.button("Generate Projects"):
-            with st.spinner("Generating ML Projects..."):
-                # Validate inputs
-                if not selected_llms:
-                    st.error("Please select at least one LLM")
-                    return
-                
-                # Generate Projects
-                projects = self.generate_projects(
-                    project_type, 
-                    uploaded_dataset, 
-                    selected_llms
-                )
-                
-                # Display Results
-                self.display_results(projects)
+        if(selected_llms):
+            self.load_generators(selected_llms)
+            
+            # Project Type Selection
+            project_type = st.sidebar.selectbox(
+                "Select Project Domain", 
+                list(self.generators.keys())  # This will now have the project types after loading generators
+            )
+            
+            # Dataset Upload
+            uploaded_dataset = st.sidebar.file_uploader(
+                "Upload Dataset", 
+                type=['csv', 'json', 'xlsx']
+            )
+            
+            
+            # Generate Projects Button
+            if st.sidebar.button("Generate Projects"):
+                with st.spinner("Generating ML Projects..."):
+                    # Validate inputs
+                    if not selected_llms:
+                        st.error("Please select at least one LLM")
+                        return
+                    
+                    # Generate Projects
+                    projects = self.generate_projects(
+                        project_type, 
+                        uploaded_dataset, 
+                        selected_llms
+                    )
+                    
+                    # Display Results
+                    self.display_results(projects)
     
     def generate_projects(self, project_type, dataset, llms):
         generator = self.generators[project_type]

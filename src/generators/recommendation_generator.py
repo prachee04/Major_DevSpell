@@ -11,11 +11,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 class RecommendationGenerator:
-    def __init__(self, groq_api_key):
+    def __init__(self, groq_api_key, model):
         """Initialize with Groq API"""
         self.llm = ChatGroq(
             groq_api_key=groq_api_key,
-            model_name="llama-3.1-70b-versatile",
+            model_name=model[0],
             temperature=0.7,
         )
 
