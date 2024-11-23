@@ -1,6 +1,5 @@
 # LLM Providers Configuration
 llm_providers:
-  - distil-whisper-large-v3-en
   - gemma2-9b-it
   - gemma-7b-it
   - llama3-groq-70b-8192-tool-use-preview
