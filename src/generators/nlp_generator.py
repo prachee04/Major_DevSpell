@@ -86,6 +86,9 @@ class NLPGenerator:
                 raise ValueError(f"Error reading file-like object: {str(e)}")
 
         raise TypeError("Dataset must be a file path (CSV/JSON), DataFrame, or file-like object")
+    def _sanitize_output(self, text):
+            """Remove triple backticks and other formatting markers from text."""
+            return text.replace("```python", "").replace("```", "").strip()
 
 
     def _generate_code(self, prompt_template, **kwargs):
@@ -104,7 +107,11 @@ class NLPGenerator:
             
             # Create and run the chain
             chain = LLMChain(llm=self.llm, prompt=prompt)
-            return chain.run(**inputs)
+            
+            
+            
+            return self._sanitize_output(chain.run(**inputs))
+
         
         except Exception as e:
             print(f"Error generating code: {e}")
@@ -159,7 +166,7 @@ class NLPGenerator:
 
         # Data Preprocessing Script
         preprocessing_prompt = """
-        You are an experienced Python developer specializing in NLP and machine learning. Your task is to generate a Python script for preprocessing NLP data. The script should be modular, clean, and efficient.
+        You are an experienced Python developer specializing in NLP and machine learning. Your task is to generate a Python code for preprocessing NLP data. The script should be modular, clean, and efficient. Only return the code without any ```python start or end line.
 
 Specifications:
 
@@ -171,6 +178,7 @@ Specifications:
     6.Stop word removal.
     7.Lemmatization
     8.Vectorization techniques (e.g., TF-IDF, CountVectorizer).
+    9. Do not start or end the code with ```python or ```
 Constraints:
 
     1.Write only the Python script. Non-code instructions should be included as comments.
@@ -184,7 +192,6 @@ Constraints:
             task=nlp_task
         )
 
-        # Model Training Script
         model_prompt = """
 You are a seasoned machine learning engineer with expertise in designing and implementing end-to-end ML pipelines. Your task is to generate a Python script for building a machine learning model.
 
