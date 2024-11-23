@@ -42,7 +42,7 @@ class MLProjectGenerator:
             TimeSeriesGenerator = importlib.import_module('src.generators.time_series_generator')
             NLPGenerator = importlib.import_module('src.generators.nlp_generator')
             ClassificationGenerator = importlib.import_module('src.generators.classification_generator')
-            DataAnalyticsGenerator = importlib.import_module('src.generators.data_analytics_generator')
+            # DataAnalyticsGenerator = importlib.import_module('src.generators.data_analytics_generator')
             ComputerVisionGenerator = importlib.import_module('src.generators.computer_vision_generator')
 
             # Initialize Generators with Groq API Key for relevant generators
@@ -51,7 +51,7 @@ class MLProjectGenerator:
                 'Time Series Analysis': TimeSeriesGenerator.TimeSeriesGenerator(groq_api_key=self.groq_api_key),
                 'Natural Language Processing': NLPGenerator.NLPGenerator(groq_api_key=self.groq_api_key),
                 'Classification': ClassificationGenerator.ClassificationGenerator(groq_api_key=self.groq_api_key),
-                'Data Analytics': DataAnalyticsGenerator.DataAnalyticsGenerator(groq_api_key=self.groq_api_key),
+                # 'Data Analytics': DataAnalyticsGenerator.DataAnalyticsGenerator(groq_api_key=self.groq_api_key),
                 'Computer Vision': ComputerVisionGenerator.ComputerVisionGenerator(groq_api_key=self.groq_api_key)
             }
 
@@ -84,6 +84,7 @@ class MLProjectGenerator:
         selected_llms = st.sidebar.multiselect(
             "Select LLMs for Comparison", 
             self.config['llm_providers']
+
         )
         
         # Generate Projects Button
@@ -122,7 +123,7 @@ class MLProjectGenerator:
                 return {}
 
         for llm in llms:
-            llm_client = self.llm_selector.get_llm(llm)
+            llm_client = self.llm_selector.get_llm(llm,api_key=self.groq_api_key)
             
             try:
                 # Generate project, passing the processed dataset

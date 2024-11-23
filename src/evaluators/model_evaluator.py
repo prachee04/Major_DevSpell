@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+
 import seaborn as sns
 from sklearn.metrics import (
     accuracy_score, 
@@ -19,15 +20,15 @@ class ModelEvaluator:
         for llm, project in projects.items():
             # Perform model training and evaluation
             model = project.train_model()
-            predictions = model.predict(test_data)
+            # predictions = model.predict(test_data)
             
-            results[llm] = {
-                'accuracy': accuracy_score(test_labels, predictions),
-                'precision': precision_score(test_labels, predictions),
-                'recall': recall_score(test_labels, predictions),
-                'f1_score': f1_score(test_labels, predictions),
-                'confusion_matrix': confusion_matrix(test_labels, predictions)
-            }
+            # results[llm] = {
+            #     'accuracy': accuracy_score(test_labels, predictions),
+            #     'precision': precision_score(test_labels, predictions),
+            #     'recall': recall_score(test_labels, predictions),
+            #     'f1_score': f1_score(test_labels, predictions),
+            #     'confusion_matrix': confusion_matrix(test_labels, predictions)
+            # }
         
         self.visualize_comparison(results)
         return results

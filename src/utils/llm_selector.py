@@ -1,35 +1,22 @@
 import os
 from dotenv import load_dotenv  
 from groq import Groq
+from langchain_groq import ChatGroq
+
+from langchain_groq import ChatGroq
 
 class LLMSelector:
-    def __init__(self, llm_providers):
-        # Load environment variables
-        load_dotenv()
-        
-        self.llm_providers = llm_providers
-        self.clients = {
-            'groq_llama3_70b': self._init_groq_llama3(),
-            'groq_mixtral_8x7b': self._init_groq_mixtral(),
-            'groq_gemma_7b': self._init_groq_gemma()
+    def __init__(self, providers):
+        self.providers = {
+            'Groq Llama 3 70B': 'llama-3.1-70b-versatile',
+            'Groq Mixtral 8x7B': 'mixtral-8x7b-32768',
+            # Add more Groq LLMs
         }
     
-    def _init_groq_llama3(self):
-        return Groq(api_key=os.getenv('GROQ_API_KEY'))
-    
-    def _init_groq_mixtral(self):
-        return Groq(api_key=os.getenv('GROQ_API_KEY'))
-    
-    def _init_groq_gemma(self):
-        return Groq(api_key=os.getenv('GROQ_API_KEY'))
-    
-    def get_llm(self, provider):
-        client = self.clients.get(provider)
-        
-        model_mapping = {
-            'groq_llama3_70b': "llama3-70b-8192",
-            'groq_mixtral_8x7b': "mixtral-8x7b-32768",
-            'groq_gemma_7b': "gemma-7b-it"
-        }
-        
-        return client, model_mapping.get(provider)
+    def get_llm(self, provider_name, api_key):
+        model_name = self.providers.get(provider_name)
+        return ChatGroq(
+            groq_api_key=api_key,
+            model_name=model_name,
+            temperature=0.7
+        )

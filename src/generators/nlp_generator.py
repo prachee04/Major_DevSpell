@@ -4,13 +4,24 @@ import numpy as np
 from langchain_groq import ChatGroq
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+import chardet
+import io
+
+
+
+def detect_encoding(file):
+    with open(file, 'rb') as f:
+        raw_data = f.read(10000)  # Read a chunk of the file
+    result = chardet.detect(raw_data)
+    return result['encoding']
+
 
 
 class NLPGenerator:
     def __init__(self, groq_api_key):
         """Initialize with Groq API"""
         self.llm = ChatGroq(
-            groq_api_key=groq_api_key,
+            api_key=groq_api_key,
             model_name="llama-3.1-70b-versatile",
             temperature=0.7,
         )
@@ -22,8 +33,13 @@ class NLPGenerator:
             prompt=PromptTemplate.from_template(prompt_template),
         )
 
+    
+
     def _preprocess_dataset(self, dataset):
-        """Preprocess the dataset: Either a pandas DataFrame or uploaded file"""
+        """
+        Preprocess the dataset: Either a pandas DataFrame or uploaded file.
+        Handles file encoding issues.
+        """
         # If dataset is a pandas DataFrame, return it as-is
         if isinstance(dataset, pd.DataFrame):
             return dataset
@@ -33,12 +49,15 @@ class NLPGenerator:
             if not os.path.exists(dataset):
                 raise FileNotFoundError(f"Dataset file not found: {dataset}")
 
+            # Detect encoding if the file cannot be read with UTF-8
+            encoding = detect_encoding(dataset)
+
             file_ext = os.path.splitext(dataset)[1].lower()
             try:
                 if file_ext == ".csv":
-                    return pd.read_csv(dataset)
+                    return pd.read_csv(dataset, encoding=encoding)
                 elif file_ext == ".json":
-                    return pd.read_json(dataset)
+                    return pd.read_json(dataset, encoding=encoding)
                 elif file_ext in [".xls", ".xlsx"]:
                     return pd.read_excel(dataset)
                 else:
@@ -49,19 +68,23 @@ class NLPGenerator:
         # Handle file-like objects (e.g., Streamlit uploads)
         if hasattr(dataset, "name"):
             file_ext = os.path.splitext(dataset.name)[1].lower()
+            file_bytes = dataset.getvalue()
+            encoding = chardet.detect(file_bytes)['encoding']
+
             try:
                 if file_ext == ".csv":
-                    return pd.read_csv(dataset)
+                    return pd.read_csv(io.BytesIO(file_bytes), encoding=encoding)
                 elif file_ext == ".json":
-                    return pd.read_json(dataset)
+                    return pd.read_json(io.BytesIO(file_bytes), encoding=encoding)
                 elif file_ext in [".xls", ".xlsx"]:
-                    return pd.read_excel(dataset)
+                    return pd.read_excel(io.BytesIO(file_bytes))
                 else:
                     raise ValueError(f"Unsupported file type: {file_ext}")
             except Exception as e:
                 raise ValueError(f"Error reading file-like object: {str(e)}")
 
         raise TypeError("Dataset must be a file path (CSV/JSON), DataFrame, or file-like object")
+
 
     def _generate_code(self, prompt_template, **kwargs):
         """Generate code using LLMChain with error handling"""

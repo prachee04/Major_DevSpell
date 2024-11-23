@@ -29,3 +29,6 @@ tensorflow
 
 #utilities
 joblib
+
+radon
+chardet
