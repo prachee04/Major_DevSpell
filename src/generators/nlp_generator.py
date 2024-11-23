@@ -20,10 +20,9 @@ def detect_encoding(file):
 class NLPGenerator:
     def __init__(self, groq_api_key, model):
         """Initialize with Groq API"""
-
         self.llm = ChatGroq(
             groq_api_key=groq_api_key,
-            model_name=model[0],
+            model_name=model,
             temperature=0.7,
         )
 

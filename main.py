@@ -28,7 +28,7 @@ class MLProjectGenerator:
             self.config = yaml.safe_load(file)
         
         # Initialize LLM Selector
-        self.llm_selector = LLMSelector(self.config['llm_providers'])
+        # self.llm_selector = LLMSelector(self.config['llm_providers'])
         
         # Initialize Model Evaluator
         self.model_evaluator = ModelEvaluator()
@@ -49,36 +49,24 @@ class MLProjectGenerator:
 
             # Initialize Generators with Groq API Key for relevant generators
             self.generators = {
-                'Recommendation Systems': RecommendationGenerator.RecommendationGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
-                'Time Series Analysis': TimeSeriesGenerator.TimeSeriesGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
-                'Natural Language Processing': NLPGenerator.NLPGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
-                'Classification': ClassificationGenerator.ClassificationGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
-                # 'Data Analytics': DataAnalyticsGenerator.DataAnalyticsGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
-                'Computer Vision': ComputerVisionGenerator.ComputerVisionGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
+                'Recommendation Systems': RecommendationGenerator.RecommendationGenerator,
+                'Time Series Analysis': TimeSeriesGenerator.TimeSeriesGenerator,
+                'Natural Language Processing': NLPGenerator.NLPGenerator,
+                'Classification': ClassificationGenerator.ClassificationGenerator,
+                # 'Data Analytics': DataAnalyticsGenerator.DataAnalyticsGenerator,
+                'Computer Vision': ComputerVisionGenerator.ComputerVisionGenerator,
             }
-    def generate_projects_in_parallel(self,generator, processed_dataset, llms, project_type, llm_selector, groq_api_key):
-        """Generate projects using multiple LLMs in parallel."""
+
+    def generate_projects_in_parallel(self, generator, dataset, llms, project_type):
+        """Generate projects using multiple LLMs sequentially."""
         projects = {}
-
-        # Use ThreadPoolExecutor for parallel execution
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Submit tasks for each LLM
-            future_to_llm = {
-                executor.submit(self.process_llm, llm, generator, processed_dataset, project_type): llm
-                for llm in llms
-            }
-
-            # Collect results as they complete
-            for future in concurrent.futures.as_completed(future_to_llm):
-                llm = future_to_llm[future]
-                try:
-                    llm, project = future.result()
-                    if project:
-                        projects[llm] = project
-                except Exception as e:
-                    st.error(f"Error processing LLM {llm}: {e}")
-
+        for llm in llms:
+            llm, project = self.process_llm(llm, generator, dataset, project_type)
+            if project:
+                projects[llm] = project
         return projects
+
+
     def run(self):
         # Load the generators dynamically
         
@@ -93,9 +81,8 @@ class MLProjectGenerator:
         selected_llms = st.sidebar.multiselect(
             "Select LLMs for Comparison", 
             self.config['llm_providers'],
-             
         )
-        if(selected_llms):
+        if selected_llms:
             self.load_generators(selected_llms)
             
             # Project Type Selection
@@ -109,7 +96,6 @@ class MLProjectGenerator:
                 "Upload Dataset", 
                 type=['csv', 'json', 'xlsx']
             )
-            
             
             # Generate Projects Button
             if st.sidebar.button("Generate Projects"):
@@ -128,69 +114,38 @@ class MLProjectGenerator:
                     
                     # Display Results
                     self.display_results(projects)
-    
 
-
-    
     def generate_projects(self, project_type, dataset, llms):
-        generator = self.generators[project_type]
+        generator_class = self.generators[project_type]
         projects = {}
-        
-        # Ensure dataset is processed correctly
-        processed_dataset = None
-        if dataset is not None:
-            try:
-                # Use the generator's preprocessing method
-                processed_dataset = generator._preprocess_dataset(dataset)
-                
-                if processed_dataset.empty:
-                    st.warning("The uploaded dataset is empty. Proceeding with minimal data.")
-            except Exception as e:
-                st.error(f"Error processing dataset: {e}")
-                return {}
 
-        # for llm in llms:
-        #     llm_client = self.llm_selector.get_llm(api_key=self.groq_api_key,model = llm)
-            
-        #     try:
-        #         # Generate project, passing the processed dataset
-        #         project = generator.generate(processed_dataset)
-                
-        #         # Ensure project is a dictionary
-        #         if not isinstance(project, dict):
-        #             project = {}
+        # Ensure dataset is provided and not empty
+        if dataset is None:
+            st.error("Please upload a dataset.")
+            return {}
 
-        #         # Add necessary details
-        #         project.update({
-        #             'project_name': f"{project_type} Project",
-        #             'recommendation_type': project_type,
-        #             'dataset': processed_dataset,  # Add processed dataset to project details
-        #             'llm': llm
-        #         })
-                
-        #         projects[llm] = project
-        #     except Exception as e:
-        #         st.error(f"Error generating project for {llm}: {e}")
+        # Generate projects in parallel, processing each LLM
         projects = self.generate_projects_in_parallel(
-            generator=generator,
-            processed_dataset=processed_dataset,
+            generator=generator_class,
+            dataset=dataset,  # Pass the raw dataset to be processed by each LLM
             llms=llms,
-            project_type=project_type,
-            llm_selector=self.llm_selector,
-            groq_api_key=self.groq_api_key
+            project_type=project_type
         )
 
         return projects
-    
-    def process_llm(self, llm, generator, processed_dataset, project_type):
+
+    def process_llm(self, llm, generator_class, dataset, project_type):
         """Process a single LLM to generate the project."""
         try:
             # Initialize the LLM client using instance variables
-            llm_client = self.llm_selector.get_llm(api_key=self.groq_api_key, model=llm)
+            # llm_client = LLMSelector.get_llm(api_key=self.groq_api_key, model=llm)
 
-            # Generate the project
-            project = generator.generate(processed_dataset)
+            # Create the generator instance for the current LLM
 
+            generator = generator_class(groq_api_key=self.groq_api_key, model=llm)
+
+            # Generate the project and process dataset within the generator
+            project = generator.generate(dataset)  # Pass the dataset for processing inside the generator
             # Ensure the project is a dictionary
             if not isinstance(project, dict):
                 project = {}
@@ -199,7 +154,7 @@ class MLProjectGenerator:
             project.update({
                 'project_name': f"{project_type} Project",
                 'recommendation_type': project_type,
-                'dataset': processed_dataset,
+                'dataset': dataset,
                 'llm': llm
             })
             return llm, project
