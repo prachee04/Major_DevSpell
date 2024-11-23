@@ -57,14 +57,34 @@ class MLProjectGenerator:
                 'Computer Vision': ComputerVisionGenerator.ComputerVisionGenerator,
             }
 
+    import concurrent.futures
+
     def generate_projects_in_parallel(self, generator, dataset, llms, project_type):
-        """Generate projects using multiple LLMs sequentially."""
+        """Generate projects using multiple LLMs in parallel."""
         projects = {}
-        for llm in llms:
-            llm, project = self.process_llm(llm, generator, dataset, project_type)
-            if project:
-                projects[llm] = project
+
+        # Use ThreadPoolExecutor for parallel execution
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Submit tasks for each LLM
+            future_to_llm = {
+                executor.submit(self.process_llm, llm, generator, dataset, project_type): llm
+                for llm in llms
+            }
+
+            # Collect results as they complete
+            for future in concurrent.futures.as_completed(future_to_llm):
+                llm = future_to_llm[future]
+                try:
+                    # Get the result from the future
+                    llm, project = future.result()
+                    if project:
+                        projects[llm] = project
+                except Exception as e:
+                    # Handle any exceptions that occurred during the processing of an LLM
+                    st.error(f"Error processing LLM {llm}: {e}")
+
         return projects
+
 
 
     def run(self):
