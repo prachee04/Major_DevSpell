@@ -47,21 +47,12 @@ class MLProjectGenerator:
 
             # Initialize Generators with Groq API Key for relevant generators
             self.generators = {
-<<<<<<< Updated upstream
-                'Recommendation Systems': RecommendationGenerator.RecommendationGenerator(groq_api_key=self.groq_api_key),
-                'Time Series Analysis': TimeSeriesGenerator.TimeSeriesGenerator(groq_api_key=self.groq_api_key),
-                'Natural Language Processing': NLPGenerator.NLPGenerator(groq_api_key=self.groq_api_key),
-                'Classification': ClassificationGenerator.ClassificationGenerator(groq_api_key=self.groq_api_key),
-                # 'Data Analytics': DataAnalyticsGenerator.DataAnalyticsGenerator(groq_api_key=self.groq_api_key),
-                'Computer Vision': ComputerVisionGenerator.ComputerVisionGenerator(groq_api_key=self.groq_api_key)
-=======
                 'Recommendation Systems': RecommendationGenerator.RecommendationGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
                 'Time Series Analysis': TimeSeriesGenerator.TimeSeriesGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
                 'Natural Language Processing': NLPGenerator.NLPGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
                 'Classification': ClassificationGenerator.ClassificationGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
-                'Data Analytics': DataAnalyticsGenerator.DataAnalyticsGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
+                # 'Data Analytics': DataAnalyticsGenerator.DataAnalyticsGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
                 'Computer Vision': ComputerVisionGenerator.ComputerVisionGenerator(groq_api_key=self.groq_api_key,model=llm_selector),
->>>>>>> Stashed changes
             }
 
     def run(self):
@@ -77,13 +68,8 @@ class MLProjectGenerator:
         st.sidebar.header("Project Configuration")
         selected_llms = st.sidebar.multiselect(
             "Select LLMs for Comparison", 
-<<<<<<< Updated upstream
-            self.config['llm_providers']
-
-=======
             self.config['llm_providers'],
              
->>>>>>> Stashed changes
         )
         if(selected_llms):
             self.load_generators(selected_llms)

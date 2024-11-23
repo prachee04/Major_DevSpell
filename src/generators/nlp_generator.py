@@ -22,13 +22,8 @@ class NLPGenerator:
         """Initialize with Groq API"""
 
         self.llm = ChatGroq(
-<<<<<<< Updated upstream
-            api_key=groq_api_key,
-            model_name="llama-3.1-70b-versatile",
-=======
             groq_api_key=groq_api_key,
             model_name=model[0],
->>>>>>> Stashed changes
             temperature=0.7,
         )
 
