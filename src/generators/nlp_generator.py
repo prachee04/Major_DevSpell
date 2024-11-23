@@ -18,8 +18,10 @@ def detect_encoding(file):
 
 
 class NLPGenerator:
-    def __init__(self, groq_api_key, model):
+    def __init__(self, groq_api_key, model, name):
         """Initialize with Groq API"""
+        self.name= name
+        self.model=model
         self.llm = ChatGroq(
             groq_api_key=groq_api_key,
             model_name=model,
@@ -127,7 +129,8 @@ class NLPGenerator:
 
     def _generate_project_structure(self, project_name):
         """Generate project directory structure"""
-        base_dir = os.path.join(os.getcwd(), project_name)
+        
+        base_dir = os.path.join(os.getcwd(), "results",self.name,self.model)
         dirs = {
             "root": base_dir,
             "src": os.path.join(base_dir, "src"),
@@ -171,7 +174,7 @@ Specifications:
 Constraints:
 
     1.Write only the Python script. Non-code instructions should be included as comments.
-    2.Do not include any start or end markers for the code (e.g., ```python).
+    2.Do not include any start or end markers for the code (e.g., ```python or ```).
     3.Ensure the code is modular, with functions for each preprocessing step, and easily adaptable for new datasets or tasks.
 
         """
@@ -196,8 +199,9 @@ Specifications:
 Constraints:
 
     1.Provide only the Python script; any explanation or non-code instructions should appear as comments within the code.
-    2.Do not include any start or end markers for the code (e.g., ```python).
+    2.Do not include any start or end markers for the code (e.g., ```python or ```).
     3.The code must be modular, clean, and include function definitions for key steps to ensure reusability.
+    4.Do not any ```python for starting or ending
 Additional Notes:
 
     Select appropriate machine learning libraries (e.g., scikit-learn, TensorFlow, PyTorch) based on the task's requirements.

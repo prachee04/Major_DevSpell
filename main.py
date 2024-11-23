@@ -59,7 +59,7 @@ class MLProjectGenerator:
 
     import concurrent.futures
 
-    def generate_projects_in_parallel(self, generator, dataset, llms, project_type):
+    def generate_projects_in_parallel(self, generator, dataset, llms, project_type,project_name):
         """Generate projects using multiple LLMs in parallel."""
         projects = {}
 
@@ -67,7 +67,7 @@ class MLProjectGenerator:
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Submit tasks for each LLM
             future_to_llm = {
-                executor.submit(self.process_llm, llm, generator, dataset, project_type): llm
+                executor.submit(self.process_llm, llm, generator, dataset, project_type,project_name): llm
                 for llm in llms
             }
 
@@ -98,6 +98,7 @@ class MLProjectGenerator:
         
         # Sidebar for configuration
         st.sidebar.header("Project Configuration")
+        project_name= st.sidebar.text_input("Enter your project name")
         selected_llms = st.sidebar.multiselect(
             "Select LLMs for Comparison", 
             self.config['llm_providers'],
@@ -129,13 +130,14 @@ class MLProjectGenerator:
                     projects = self.generate_projects(
                         project_type, 
                         uploaded_dataset, 
-                        selected_llms
+                        selected_llms,
+                        project_name
                     )
                     
                     # Display Results
                     self.display_results(projects)
 
-    def generate_projects(self, project_type, dataset, llms):
+    def generate_projects(self, project_type, dataset, llms,project_name):
         generator_class = self.generators[project_type]
         projects = {}
 
@@ -149,12 +151,13 @@ class MLProjectGenerator:
             generator=generator_class,
             dataset=dataset,  # Pass the raw dataset to be processed by each LLM
             llms=llms,
-            project_type=project_type
+            project_type=project_type,
+            project_name=project_name
         )
 
         return projects
 
-    def process_llm(self, llm, generator_class, dataset, project_type):
+    def process_llm(self, llm, generator_class, dataset, project_type,project_name):
         """Process a single LLM to generate the project."""
         try:
             # Initialize the LLM client using instance variables
@@ -162,7 +165,7 @@ class MLProjectGenerator:
 
             # Create the generator instance for the current LLM
 
-            generator = generator_class(groq_api_key=self.groq_api_key, model=llm)
+            generator = generator_class(groq_api_key=self.groq_api_key, model=llm, name= project_name)
 
             # Generate the project and process dataset within the generator
             project = generator.generate(dataset)  # Pass the dataset for processing inside the generator
@@ -172,7 +175,7 @@ class MLProjectGenerator:
 
             # Add additional project details
             project.update({
-                'project_name': f"{project_type} Project",
+                'project_name': project_name,
                 'recommendation_type': project_type,
                 'dataset': dataset,
                 'llm': llm
