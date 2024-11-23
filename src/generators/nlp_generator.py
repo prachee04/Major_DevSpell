@@ -157,16 +157,24 @@ class NLPGenerator:
 
         # Data Preprocessing Script
         preprocessing_prompt = """
-        Create a Python script for NLP data preprocessing.
-        Dataset columns: {columns}
-        NLP Task: {task}
-        Include:
-        - Text cleaning
-        - Tokenization
-        - Stop word removal
-        - Vectorization techniques
-        Anything other than the code should be commented out for python.
-        Do not include "```python" for starting or ending the python code.
+        You are an experienced Python developer specializing in NLP and machine learning. Your task is to generate a Python script for preprocessing NLP data. The script should be modular, clean, and efficient.
+
+Specifications:
+
+    1.The dataset contains columns: {columns}.
+    2.The NLP task is: {task}.
+    3.The preprocessing pipeline must include:
+    4.Text cleaning (e.g., lowercasing, removing special characters).
+    5.Tokenization.
+    6.Stop word removal.
+    7.Lemmatization
+    8.Vectorization techniques (e.g., TF-IDF, CountVectorizer).
+Constraints:
+
+    1.Write only the Python script. Non-code instructions should be included as comments.
+    2.Do not include any start or end markers for the code (e.g., ```python).
+    3.Ensure the code is modular, with functions for each preprocessing step, and easily adaptable for new datasets or tasks.
+
         """
         code_files["data_preprocessing.py"] = self._generate_code(
             preprocessing_prompt, 
@@ -176,15 +184,25 @@ class NLPGenerator:
 
         # Model Training Script
         model_prompt = """
-        Create a machine learning model for {task} task.
-        Dataset columns: {columns}
-        Include:
-        - Model architectures
-        - Training pipeline
-        - Hyperparameter tuning
-        Do not include "```python" for starting or ending the python code.
-        
-        """
+You are a seasoned machine learning engineer with expertise in designing and implementing end-to-end ML pipelines. Your task is to generate a Python script for building a machine learning model.
+
+Specifications:
+
+    1.The task is: {task}.
+    2.The dataset contains columns: {columns}.
+    3.The script must include:
+    4.Implementation of one or more model architectures suited to the task.
+    5.A training pipeline with data preprocessing, splitting, model training, and evaluation.
+    6.Hyperparameter tuning using a grid search, random search, or a modern library like Optuna or Hyperopt.
+Constraints:
+
+    1.Provide only the Python script; any explanation or non-code instructions should appear as comments within the code.
+    2.Do not include any start or end markers for the code (e.g., ```python).
+    3.The code must be modular, clean, and include function definitions for key steps to ensure reusability.
+Additional Notes:
+
+    Select appropriate machine learning libraries (e.g., scikit-learn, TensorFlow, PyTorch) based on the task's requirements.
+    Optimize for clarity and usability, making the script easy to understand and adapt.        """
         code_files["model_training.py"] = self._generate_code(
             model_prompt,
             task=nlp_task,
@@ -193,13 +211,29 @@ class NLPGenerator:
 
         # Evaluation Script
         eval_prompt = """
-        Create an evaluation script for NLP models.
-        Include metrics:
-        - Accuracy
-        - Precision
-        - Recall
-        - F1-score
-        - Confusion Matrix
+        You are an experienced natural language processing (NLP) engineer specializing in evaluating machine learning models. Your task is to generate a Python script for evaluating NLP models.
+
+Specifications:
+
+The script must compute and display the following metrics:
+    1.Accuracy
+    2.Precision
+    3.Recall
+    4.F1-score
+    5.Confusion Matrix
+    6.The script should accept: True labels and predicted labels as inputs.
+    7.An optional parameter for class labels to enhance interpretability in multi-class settings.
+    8.Ensure the script is modular, with each metric encapsulated in a reusable function.
+Constraints:
+
+Include comments in the script to explain each section or logic, but do not provide any explanation outside of the Python code.
+Do not use markers like ```python to start or end the code.
+Use appropriate libraries like scikit-learn to compute metrics and generate the confusion matrix.
+Additional Notes:
+
+Use clear and concise variable names for readability.
+Include a main block (if __name__ == "__main__":) to demonstrate the script's usage with sample inputs.
+
         """
         code_files["model_evaluation.py"] = self._generate_code(eval_prompt)
 
