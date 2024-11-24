@@ -7,12 +7,12 @@ import pandas as pd
 import numpy as np
 import matplotlib as plt
 import concurrent.futures
-from projectrunner import ProjectRunner 
+from projectrunner import ProjectRunnerWithErrorHandling 
 # Import LLMSelector and ModelEvaluator (Make sure these paths are correct based on your folder structure)
 from src.utils.llm_selector import LLMSelector
 from src.evaluators.model_evaluator import ModelEvaluator
 from src.evaluators.recommendation_model_evaluator import RecommendationModelEvaluator
-
+from errorhandler import LLMErrorHandler
 class MLProjectGenerator:
     def __init__(self):
         # Load environment variables
@@ -135,7 +135,8 @@ class MLProjectGenerator:
                     )
                     if(projects):
                         self.display_results(projects)
-                        runner= ProjectRunner(project_name, selected_llms)
+                        error_handler = LLMErrorHandler(selected_llms)
+                        runner= ProjectRunnerWithErrorHandling(project_name, selected_llms,error_handler)
                         runner.run_all()
                     
                     # Display Results

@@ -4,8 +4,7 @@ langchain
 transformers
 
 # ML and Data Science
-distutils.msvccompiler
-scikit-learn==0.13
+scikit-learn
 optuna
 nltk
 pandas
@@ -13,6 +12,7 @@ numpy
 matplotlib
 seaborn
 scipy
+unidecode
 pydantic
 
 # Project Management
@@ -36,4 +36,5 @@ joblib
 
 radon
 chardet
-
+anthropic
+openai

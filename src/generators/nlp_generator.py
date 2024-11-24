@@ -184,16 +184,137 @@ class NLPGenerator:
         code_files = {}
 
         # Data Preprocessing Script
-        preprocessing_prompt = """
-        You are an expert NLP data scientist. Write a Python script for data preprocessing. The dataset is named 'test.csv' and contains the columns: {columns}. The task is: {task}. Include:
-1. Text cleaning (e.g., lowercasing, removing special characters).
-2. Tokenization.
-3. Stop word removal.
-4. Lemmatization.
-5. Vectorization using TF-IDF and CountVectorizer.
 
-Encapsulate the preprocessing steps in functions. Include a `run` function that accepts the dataset path as input.
-        """
+        
+        preprocessing_prompt = """
+You are an experienced Python developer specializing in NLP data preprocessing. Generate a Python script for preprocessing NLP data that follows a clear pipeline architecture.
+
+Specifications:
+
+1. Create a PreprocessingPipeline class with the following methods:
+    - _init_(self, config: Dict[str, Any]):
+        # Store normalized column names from config
+        self.columns = [unidecode(col).strip().lower().replace(' ', '_') for col in config['columns']]
+        self.config = config
+
+    - normalize_column_name(self, column: str) -> str:
+        # Consistently normalize column names
+        return unidecode(str(column)).strip().lower().replace(' ', '_')
+
+    - validate_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        # Normalize all DataFrame column names
+        df.columns = [self.normalize_column_name(col) for col in df.columns]
+        
+        # Validate required columns exist
+        missing_cols = set(self.columns) - set(df.columns)
+        if missing_cols:
+            available_cols = ', '.join(df.columns)
+            raise KeyError(f"Missing columns: {missing_cols}. Available columns: {available_cols}")
+        return df
+
+    - load_data(self, file_path: str) -> pd.DataFrame:
+        try:
+            file_path = os.path.join(os.getcwd(), file_path)
+            
+            # Detect encoding
+            with open(file_path, 'rb') as file:
+                raw = file.read()
+                encoding = chardet.detect(raw)['encoding'] or 'utf-8'
+            
+            # Load with detected encoding
+            df = pd.read_csv(file_path, encoding=encoding)
+            
+            # Validate and normalize columns
+            df = self.validate_columns(df)
+            
+            # Convert text columns to string type
+            for col in self.columns:
+                df[col] = df[col].astype(str).replace('nan', '')
+            
+            return df
+            
+        except UnicodeDecodeError:
+            # Fallback to latin-1
+            file_path = os.path.join(os.getcwd(), file_path)
+            df = pd.read_csv(file_path, encoding='latin-1')
+            df = self.validate_columns(df)
+            
+            for col in self.columns:
+                df[col] = df[col].astype(str).replace('nan', '')
+            
+            return df
+
+    - clean_text(self, text: str) -> str:
+        if pd.isna(text):
+            return ""
+        return str(text).replace('\\n', ' ').replace('\\r', '')
+
+    - tokenize(self, text: str) -> List[str]
+    - remove_stopwords(self, tokens: List[str]) -> List[str]
+    - lemmatize(self, tokens: List[str]) -> List[str]
+    - vectorize(self, texts: List[str]) -> np.ndarray
+    - transform(self, df: pd.DataFrame) -> Tuple[np.ndarray, object]:
+        # Validate columns before processing
+        df = self.validate_columns(df)
+        # Rest of the transform logic...
+
+    - save_vectorizer(self, save_path: str) -> None
+
+2. The script should:
+    # Previous specifications remain the same but now with enhanced column handling
+    * Write code for each function and create any additional function that is needed
+    * Task to be performed: {task}
+    * Process text columns: {columns}
+    * Sanitize column names using normalize_column_name method
+    * Get current directory using cur_direc = os.getcwd()
+    * Save preprocessed data to the path -> "curr_direct/preprocessed/"
+    * Save vectorizer to the path -> "cur_direc/vectors/"
+    * Include encoding="utf-8" in all file operations
+    * dataset is stored in the same path by the name of test.csv
+
+3. Required imports:
+    import os
+    import pandas as pd
+    import numpy as np
+    import chardet
+    from unidecode import unidecode
+    from typing import Dict, Any, List, Tuple
+    from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+    import nltk
+    from nltk.tokenize import word_tokenize
+    from nltk.corpus import stopwords
+    from nltk.stem import WordNetLemmatizer
+    import warnings
+    warnings.filterwarnings('ignore')
+
+4. Implementation requirements:
+    * Use scikit-learn for vectorization (TF-IDF/CountVectorizer)
+    * Use NLTK for text processing
+    * Include proper error handling for encodings
+    * Save preprocessing configuration
+    * Handle non-ASCII characters in column names using unidecode
+    * Use nltk.stem import WordNetLemmatizer for lemmatization
+    * Ensure consistent column name normalization throughout the pipeline
+    * Handle missing or mismatched columns gracefully with clear error messages
+
+5. Main function should:
+    * Initialize and run pipeline
+    * Include encoding checks
+    * Handle file encoding detection
+    * Sanitize column names consistently using normalize_column_name method
+    * Validate column presence before processing
+    * Handle encoding-related column name mismatches
+
+6. Constraints:
+    * Should not include anything other than python code
+    * No description should be given in the end
+    * Handle both UTF-8 and non-UTF-8 encodings
+    * Sanitize all text input/output
+    * Ensure consistent column name handling across different encodings
+    * Provide clear error messages for missing or mismatched columns
+
+7. Run the code and make sure everything is working and return the working code only
+"""
         code_files["data_preprocessing.py"] = self._generate_code(
             preprocessing_prompt, 
             columns=str(list(df.columns)), 
