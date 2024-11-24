@@ -5,10 +5,7 @@ class ProjectRunner:
     def __init__(self, project_name, llm_used):
         self.base_dir = os.path.join("results", project_name, llm_used[0], "results")
         self.files_to_run = {
-            "data_preprocessing.py": None,
             "model_training.py": None,
-            "model_evaluation.py": None,
-            "model_inference.py": None,
         }
 
     def validate_files(self):

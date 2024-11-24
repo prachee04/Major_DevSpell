@@ -4,7 +4,10 @@ langchain
 transformers
 
 # ML and Data Science
-scikit-learn
+distutils.msvccompiler
+scikit-learn==0.13
+optuna
+nltk
 pandas
 numpy
 matplotlib
@@ -34,5 +37,3 @@ joblib
 radon
 chardet
 
-
-nltk

@@ -6,6 +6,7 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 import chardet
 import io
+import re
 
 
 
@@ -34,8 +35,6 @@ class NLPGenerator:
             llm=self.llm,
             prompt=PromptTemplate.from_template(prompt_template),
         )
-
-    
 
     def _preprocess_dataset(self, dataset):
         """
@@ -86,9 +85,26 @@ class NLPGenerator:
                 raise ValueError(f"Error reading file-like object: {str(e)}")
 
         raise TypeError("Dataset must be a file path (CSV/JSON), DataFrame, or file-like object")
+    import re
+
     def _sanitize_output(self, text):
-            """Remove triple backticks and other formatting markers from text."""
-            return text.replace("```python", "").replace("```", "").strip()
+        """
+        Extract and return only valid Python code from the text.
+        Removes any non-Python content, including markdown, extra formatting,
+        and irrelevant text.
+        """
+        # Regular expression to match Python code blocks
+        python_code_blocks = re.findall(r"```python(.*?)```", text, re.DOTALL)
+        
+        if python_code_blocks:
+            # Concatenate all detected Python code blocks
+            sanitized_code = "\n".join(python_code_blocks)
+        else:
+            # If no explicit Python code blocks, assume the entire text might be code
+            # but filter out anything obviously not Python (like markdown headers)
+            sanitized_code = re.sub(r"[^a-zA-Z0-9_#:\n\(\)\[\]\{\}.,=+\-*\/<>%&|! ]", "", text)
+        
+        return sanitized_code.strip()
 
 
     def _generate_code(self, prompt_template, **kwargs):
@@ -151,11 +167,11 @@ class NLPGenerator:
     def generate(self, dataset):
         """Generate complete NLP project"""
         df = self._preprocess_dataset(dataset)
-        project_name = f"nlp_project_{np.random.randint(1000, 9999)}"
-        project_dirs = self._generate_project_structure(project_name)
+
+        project_dirs = self._generate_project_structure(self.name)
 
         # Save dataset to CSV in the dataset directory
-        dataset_path = os.path.join(project_dirs["dataset"], "test.csv")
+        dataset_path = os.path.join(project_dirs["results"], "test.csv")
         df.to_csv(dataset_path, index=False)
 
         # Ensure the results folder exists
@@ -169,19 +185,14 @@ class NLPGenerator:
 
         # Data Preprocessing Script
         preprocessing_prompt = """
-        You are an experienced Python developer specializing in NLP and machine learning. Your task is to generate a Python code for preprocessing NLP data. The script should be modular, clean, and efficient.
+        You are an expert NLP data scientist. Write a Python script for data preprocessing. The dataset is named 'test.csv' and contains the columns: {columns}. The task is: {task}. Include:
+1. Text cleaning (e.g., lowercasing, removing special characters).
+2. Tokenization.
+3. Stop word removal.
+4. Lemmatization.
+5. Vectorization using TF-IDF and CountVectorizer.
 
-        Specifications:
-            1. The dataset should be loaded from './dataset/test.csv'
-            2. The dataset contains columns: {columns}
-            3. The NLP task is: {task}
-            4. The preprocessing pipeline must include:
-                - Text cleaning (e.g., lowercasing, removing special characters)
-                - Tokenization
-                - Stop word removal
-                - Lemmatization
-                - Vectorization techniques (e.g., TF-IDF, CountVectorizer)
-            5. A runner function with the name "run" that will take dataset path as input
+Encapsulate the preprocessing steps in functions. Include a `run` function that accepts the dataset path as input.
         """
         code_files["data_preprocessing.py"] = self._generate_code(
             preprocessing_prompt, 
@@ -196,20 +207,19 @@ Specifications:
 
     1. The task is: {task}.
     2. The dataset contains columns: {columns}.
-    3. The dataset should be loaded from '../dataset/test.csv'.
+    3. The dataset should be loaded from "/test.csv".
     4. The script must include:
         - Implementation of one or more model architectures suited to the task.
         - A training pipeline with data preprocessing, splitting, model training, and evaluation.
         - Hyperparameter tuning using grid search, random search, or a modern library like Optuna or Hyperopt.
-        - Save the trained model to '../results/trained_model.pkl'.
+        - Save the trained model to './results/trained_model.pkl'.
     5. The script should be runnable directly from the command line.
     6. Only write the python script. Anything else should be included as python comments.
 
 Code Structure Requirements:
     1. Include a main() function that orchestrates the entire training process.
     2. Use proper error handling for file operations.
-    3. Include logging for important steps and metrics.
-    4. Save training metrics and results to '../results/training_metrics.json'.
+    
 
 Constraints:
 
@@ -225,6 +235,7 @@ Additional Notes:
     3. Include clear logging statements to track the training progress.
     4. Use relative imports for any custom modules from data_preprocessing.py.
     5. Do not include anything other than python code.
+
 """
 
         code_files["model_training.py"] = self._generate_code(
@@ -235,40 +246,26 @@ Additional Notes:
 
         # Evaluation Script
         eval_prompt = """
-        You are an experienced natural language processing (NLP) engineer specializing in evaluating machine learning models. Your task is to generate a Python script for evaluating NLP models.
+        You are an NLP evaluation specialist. Write a Python script for evaluating NLP models. The script should:
 
-Specifications:
+1. Compute Accuracy, Precision, Recall, F1-score, and Confusion Matrix.
+2. Accept true labels and predicted labels as inputs, with an optional parameter for class labels.
+3. Encapsulate each metric calculation in reusable functions.
+4. Use scikit-learn for computations.
 
-The script must compute and display the following metrics:
-    1.Accuracy
-    2.Precision
-    3.Recall
-    4.F1-score
-    5.Confusion Matrix
-    6.The script should accept: True labels and predicted labels as inputs.
-    7.An optional parameter for class labels to enhance interpretability in multi-class settings.
-    8.Ensure the script is modular, with each metric encapsulated in a reusable function.
-Constraints:
-
-Include comments in the script to explain each section or logic, but do not provide any explanation outside of the Python code.
-Do not use markers like ```python to start or end the code.
-Use appropriate libraries like scikit-learn to compute metrics and generate the confusion matrix.
-Additional Notes:
-
-Use clear and concise variable names for readability.
-Include a main block (if __name__ == "__main__":) to demonstrate the script's usage with sample inputs.
+Include a `main` block to demonstrate usage with example inputs.
 
         """
         code_files["model_evaluation.py"] = self._generate_code(eval_prompt)
 
         # Inference Script
         inference_prompt = """
-        Create an inference script for deployed NLP model.
-        NLP Task: {task}
-        Include:
-        - Model loading
-        - Preprocessing
-        - Prediction
+        You are a deployment and inference engineer. Write a Python script for inference with an NLP model for the task: {task}. The script should include:
+1. Loading the trained model.
+2. Text preprocessing for inference.
+3. Generating predictions.
+Ensure modularity with separate functions for preprocessing and inference. The script must be callable independently.
+
         """
         code_files["model_inference.py"] = self._generate_code(
             inference_prompt, 
@@ -305,7 +302,7 @@ Include a main block (if __name__ == "__main__":) to demonstrate the script's us
             f.write(report_content)
 
         return {
-            "project_name": project_name,
+            "project_name": self.name,
             "directories": project_dirs,
             "code_files": code_files,
             "dataset_path": dataset_path

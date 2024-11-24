@@ -133,10 +133,13 @@ class MLProjectGenerator:
                         selected_llms,
                         project_name
                     )
-                    runner= ProjectRunner(project_name, selected_llms)
-                    runner.run_all()
+                    if(projects):
+                        self.display_results(projects)
+                        runner= ProjectRunner(project_name, selected_llms)
+                        runner.run_all()
+                    
                     # Display Results
-                    self.display_results(projects)
+                    
 
     def generate_projects(self, project_type, dataset, llms,project_name):
         generator_class = self.generators[project_type]
@@ -155,7 +158,7 @@ class MLProjectGenerator:
             project_type=project_type,
             project_name=project_name
         )
-
+        
         return projects
 
     def process_llm(self, llm, generator_class, dataset, project_type,project_name):
