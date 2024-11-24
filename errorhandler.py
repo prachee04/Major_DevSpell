@@ -44,7 +44,24 @@ class LLMErrorHandler:
         except Exception as e:
             print(f"Error reading file {file_path}: {str(e)}")
             return ""
-
+    def _sanitize_output(self, text):
+        """
+        Extract and return only valid Python code from the text.
+        Removes any non-Python content, including markdown, extra formatting,
+        and irrelevant text.
+        """
+        # Regular expression to match Python code blocks
+        python_code_blocks = re.findall(r"```python(.*?)```", text, re.DOTALL)
+        
+        if python_code_blocks:
+            # Concatenate all detected Python code blocks
+            sanitized_code = "\n".join(python_code_blocks)
+        else:
+            # If no explicit Python code blocks, assume the entire text might be code
+            # but filter out anything obviously not Python (like markdown headers)
+            sanitized_code = re.sub(r"[^a-zA-Z0-9_#:\n\(\)\[\]\{\}.,=+\-*\/<>%&|! ]", "", text)
+        
+        return sanitized_code.strip()
     def update_file(self, file_path: str, new_content: str) -> bool:
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -55,34 +72,47 @@ class LLMErrorHandler:
             return False
 
     def get_llm_fix(self, error_info: Dict[str, str], file_content: str) -> Optional[str]:
-        prompt = PromptTemplate(
-            input_variables=["error_type", "full_error", "file_content"],
-            template="""
-            Fix the following Python code that produced this error:
-
-            Error Type: {error_type}
-            Full Error:
-            {full_error}
-
-            Current code:
-            {file_content}
-
-            Provide only the complete fixed code, ready to save to a file.
-            """
-        )
-        chain = LLMChain(llm=self.llm, prompt=prompt)
+        """
+        Sends a request to the AI model to fix the code error and returns the corrected code.
+        """
+        prompt = f"""
+        Fix the following Python code that produced this error:
+        Error Type: {error_info['error_type']}
+        Full Error:
+        {error_info['full_error']}
+        Current code:
+        {file_content}
+        Provide only the complete fixed code, ready to save to a file.
+        """
 
         for attempt in range(self.max_retries):
             try:
-                response = chain.run({
-                    "error_type": error_info['error_type'],
-                    "full_error": error_info['full_error'],
-                    "file_content": file_content
-                })
-                print (response)
-                return response['text']  # Adjust based on actual response structure.
+                print(f"Attempt {attempt + 1}: Sending request to the ChatGPT model...")
+                
+                response = self.client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": "You are an assistant for debugging Python code."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    model="gpt-4o",
+                    temperature=0.7,
+                    max_tokens=4096,
+                    top_p=1,
+                )
+                fixed_code = response.choices[0].message.content
+                fixed_code =self._sanitize_output(fixed_code)
+                # Assuming the fixed code is returned in the 'choices[0].message.content'
+                if response :
+                    return fixed_code
+                else:
+                    print("Error: Invalid response structure.")
+                    return None
+
             except Exception as e:
                 print(f"Attempt {attempt + 1} failed: {str(e)}")
                 time.sleep(self.retry_delay)
 
+        print("Failed to get a fix after all retry attempts.")
         return None
+
+

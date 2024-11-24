@@ -1,4 +1,4 @@
-movie_title,year,director,actors,rating,runtime(mins),censor,total_gross,main_genre,side_genre
+Movie_Title,Year,Director,Actors,Rating,Runtime(Mins),Censor,Total_Gross,main_genre,side_genre
 Kantara,2022,Rishab Shetty,"Rishab Shetty, Sapthami Gowda, Kishore Kumar G., Achyuth Kumar",9.3,148,UA,Gross Unkown,Action," Adventure,  Drama"
 The Dark Knight,2008,Christopher Nolan,"Christian Bale, Heath Ledger, Aaron Eckhart, Michael Caine",9.0,152,UA,$534.86M,Action," Crime,  Drama"
 The Lord of the Rings: The Return of the King,2003,Peter Jackson,"Elijah Wood, Viggo Mortensen, Ian McKellen, Orlando Bloom",9.0,201,U,$377.85M,Action," Adventure,  Drama"
