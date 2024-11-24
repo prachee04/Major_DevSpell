@@ -107,10 +107,8 @@ class NLPGenerator:
             
             # Create and run the chain
             chain = LLMChain(llm=self.llm, prompt=prompt)
-            
-            
-            
             return self._sanitize_output(chain.run(**inputs))
+
 
         
         except Exception as e:
@@ -137,11 +135,11 @@ class NLPGenerator:
     def _generate_project_structure(self, project_name):
         """Generate project directory structure"""
         
-        base_dir = os.path.join(os.getcwd(), "results",self.name,self.model)
+        base_dir = os.path.join(os.getcwd(), "results", self.name, self.model)
         dirs = {
             "root": base_dir,
             "src": os.path.join(base_dir, "src"),
-            "data": os.path.join(base_dir, "data"),
+            "dataset": os.path.join(base_dir, "dataset"),  # Added dataset directory
             "docs": os.path.join(base_dir, "docs"),
             "results": os.path.join(base_dir, "results")
         }
@@ -149,11 +147,16 @@ class NLPGenerator:
             os.makedirs(dir_path, exist_ok=True)
         return dirs
 
+
     def generate(self, dataset):
         """Generate complete NLP project"""
         df = self._preprocess_dataset(dataset)
         project_name = f"nlp_project_{np.random.randint(1000, 9999)}"
         project_dirs = self._generate_project_structure(project_name)
+
+        # Save dataset to CSV in the dataset directory
+        dataset_path = os.path.join(project_dirs["dataset"], "test.csv")
+        df.to_csv(dataset_path, index=False)
 
         # Ensure the results folder exists
         results_dir = project_dirs["results"]
@@ -166,25 +169,19 @@ class NLPGenerator:
 
         # Data Preprocessing Script
         preprocessing_prompt = """
-        You are an experienced Python developer specializing in NLP and machine learning. Your task is to generate a Python code for preprocessing NLP data. The script should be modular, clean, and efficient. Only return the code without any ```python start or end line.
+        You are an experienced Python developer specializing in NLP and machine learning. Your task is to generate a Python code for preprocessing NLP data. The script should be modular, clean, and efficient.
 
-Specifications:
-
-    1.The dataset contains columns: {columns}.
-    2.The NLP task is: {task}.
-    3.The preprocessing pipeline must include:
-    4.Text cleaning (e.g., lowercasing, removing special characters).
-    5.Tokenization.
-    6.Stop word removal.
-    7.Lemmatization
-    8.Vectorization techniques (e.g., TF-IDF, CountVectorizer).
-    9. Do not start or end the code with ```python or ```
-Constraints:
-
-    1.Write only the Python script. Non-code instructions should be included as comments.
-    2.Do not include any start or end markers for the code (e.g., ```python or ```).
-    3.Ensure the code is modular, with functions for each preprocessing step, and easily adaptable for new datasets or tasks.
-
+        Specifications:
+            1. The dataset should be loaded from './dataset/test.csv'
+            2. The dataset contains columns: {columns}
+            3. The NLP task is: {task}
+            4. The preprocessing pipeline must include:
+                - Text cleaning (e.g., lowercasing, removing special characters)
+                - Tokenization
+                - Stop word removal
+                - Lemmatization
+                - Vectorization techniques (e.g., TF-IDF, CountVectorizer)
+            5. A runner function with the name "run" that will take dataset path as input
         """
         code_files["data_preprocessing.py"] = self._generate_code(
             preprocessing_prompt, 
@@ -197,22 +194,39 @@ You are a seasoned machine learning engineer with expertise in designing and imp
 
 Specifications:
 
-    1.The task is: {task}.
-    2.The dataset contains columns: {columns}.
-    3.The script must include:
-    4.Implementation of one or more model architectures suited to the task.
-    5.A training pipeline with data preprocessing, splitting, model training, and evaluation.
-    6.Hyperparameter tuning using a grid search, random search, or a modern library like Optuna or Hyperopt.
+    1. The task is: {task}.
+    2. The dataset contains columns: {columns}.
+    3. The dataset should be loaded from '../dataset/test.csv'.
+    4. The script must include:
+        - Implementation of one or more model architectures suited to the task.
+        - A training pipeline with data preprocessing, splitting, model training, and evaluation.
+        - Hyperparameter tuning using grid search, random search, or a modern library like Optuna or Hyperopt.
+        - Save the trained model to '../results/trained_model.pkl'.
+    5. The script should be runnable directly from the command line.
+    6. Only write the python script. Anything else should be included as python comments.
+
+Code Structure Requirements:
+    1. Include a main() function that orchestrates the entire training process.
+    2. Use proper error handling for file operations.
+    3. Include logging for important steps and metrics.
+    4. Save training metrics and results to '../results/training_metrics.json'.
+
 Constraints:
 
-    1.Provide only the Python script; any explanation or non-code instructions should appear as comments within the code.
-    2.Do not include any start or end markers for the code (e.g., ```python or ```).
-    3.The code must be modular, clean, and include function definitions for key steps to ensure reusability.
-    4.Do not any ```python for starting or ending
+    1. Provide only the Python script; any explanation or non-code instructions should appear as comments within the code.
+    2. Do not include any start or end markers for the code (e.g., ```python or ```).
+    3. The code must be modular, clean, and include function definitions for key steps to ensure reusability.
+    4. All file paths should be relative to the script's location in the results directory.
+
 Additional Notes:
 
-    Select appropriate machine learning libraries (e.g., scikit-learn, TensorFlow, PyTorch) based on the task's requirements.
-    Optimize for clarity and usability, making the script easy to understand and adapt.        """
+    1. Select appropriate machine learning libraries (e.g., scikit-learn, TensorFlow, PyTorch) based on the task's requirements.
+    2. Optimize for clarity and usability, making the script easy to understand and adapt.
+    3. Include clear logging statements to track the training progress.
+    4. Use relative imports for any custom modules from data_preprocessing.py.
+    5. Do not include anything other than python code.
+"""
+
         code_files["model_training.py"] = self._generate_code(
             model_prompt,
             task=nlp_task,
@@ -269,27 +283,30 @@ Include a main block (if __name__ == "__main__":) to demonstrate the script's us
 
         # Generate project report
         report_content = f"""
-# NLP Project
+    # NLP Project
 
-## Project Overview
-Generated Files:
-{', '.join(code_files.keys())}
+    ## Project Overview
+    Generated Files:
+    {', '.join(code_files.keys())}
 
-## NLP Task Details
-- Task: {nlp_task}
-- Comprehensive preprocessing and modeling
+    ## Dataset Location
+    The dataset is stored in: dataset/test.csv
 
-## Next Steps
-1. Review generated scripts
-2. Train and validate models
-3. Fine-tune performance
-"""
+    ## NLP Task Details
+    - Task: {nlp_task}
+    - Comprehensive preprocessing and modeling
+
+    ## Next Steps
+    1. Review generated scripts
+    2. Train and validate models
+    3. Fine-tune performance
+    """
         with open(os.path.join(project_dirs["docs"], "project_report.md"), "w") as f:
             f.write(report_content)
 
         return {
             "project_name": project_name,
-            # "nlp_type": nlp_type,
             "directories": project_dirs,
             "code_files": code_files,
+            "dataset_path": dataset_path
         }

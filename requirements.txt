@@ -32,3 +32,6 @@ joblib
 
 radon
 chardet
+
+
+nltk

@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import matplotlib as plt
 import concurrent.futures
-
+from projectrunner import ProjectRunner 
 # Import LLMSelector and ModelEvaluator (Make sure these paths are correct based on your folder structure)
 from src.utils.llm_selector import LLMSelector
 from src.evaluators.model_evaluator import ModelEvaluator
@@ -32,7 +32,7 @@ class MLProjectGenerator:
         
         # Initialize Model Evaluator
         self.model_evaluator = ModelEvaluator()
-
+        
         # Initialize empty generator dictionary for lazy loading
         self.generators = {}
 
@@ -133,7 +133,8 @@ class MLProjectGenerator:
                         selected_llms,
                         project_name
                     )
-                    
+                    runner= ProjectRunner(project_name, selected_llms)
+                    runner.run_all()
                     # Display Results
                     self.display_results(projects)
 
