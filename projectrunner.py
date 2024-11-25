@@ -14,7 +14,7 @@ class ProjectRunner:
         """
         Validate the existence of the required files before running them for a specific LLM.
         """
-        base_dir = os.path.join("results", self.project_name, llm, "results")
+        base_dir = os.path.join("project", self.project_name, llm, "results")
         for file_name in self.files_to_run.keys():
             file_path = os.path.join(base_dir, file_name)
             if not os.path.exists(file_path):
