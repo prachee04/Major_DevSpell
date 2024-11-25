@@ -21,13 +21,14 @@ def detect_encoding(file):
 class NLPGenerator:
     def __init__(self, groq_api_key, model, name):
         """Initialize with Groq API"""
-        self.name= name
-        self.model=model
+        self.name = name
+        self.model = model
         self.llm = ChatGroq(
             groq_api_key=groq_api_key,
             model_name=model,
             temperature=0.7,
         )
+
 
     def _create_chain(self, prompt_template):
         """Create a simple LLMChain"""
@@ -150,18 +151,21 @@ class NLPGenerator:
 
     def _generate_project_structure(self, project_name):
         """Generate project directory structure"""
-        
-        base_dir = os.path.join(os.getcwd(), "results", self.name, self.model)
+        base_dir = os.path.join(os.getcwd(), "project", self.name, self.model)
         dirs = {
             "root": base_dir,
             "src": os.path.join(base_dir, "src"),
-            "dataset": os.path.join(base_dir, "dataset"),  # Added dataset directory
+            "dataset": os.path.join(base_dir, "dataset"),
             "docs": os.path.join(base_dir, "docs"),
-            "results": os.path.join(base_dir, "results")
+            "results": os.path.join(base_dir, "results"),
+            "preprocessed": os.path.join(base_dir, "preprocessed"),
+            "vectors": os.path.join(base_dir, "vectors"),
+            "trainingmodel": os.path.join(base_dir, "trainingmodel"),
         }
         for dir_path in dirs.values():
             os.makedirs(dir_path, exist_ok=True)
         return dirs
+
 
 
     def generate(self, dataset):
@@ -215,7 +219,7 @@ Specifications:
     - load_data(self, file_path: str) -> pd.DataFrame:
         try:
             
-            file_loc = os.path.join(os.getcwd(), "results")
+            file_loc = os.path.join(os.getcwd(), "project")
             file_loc = os.path.join(file_loc,{name})
             file_loc = os.path.join(file_loc,{llm})
             file_loc = os.path.join(file_loc,"dataset",file_path)
@@ -239,7 +243,7 @@ Specifications:
             
         except UnicodeDecodeError:
             # Fallback to latin-1
-            file_loc = os.path.join(os.getcwd(), "results")
+            file_loc = os.path.join(os.getcwd(), "project")
             file_loc = os.path.join(file_loc,{name})
             file_loc = os.path.join(file_loc,{llm})
             file_loc = os.path.join(file_loc,"dataset")
@@ -276,9 +280,9 @@ Specifications:
     * Process text columns: {columns}
     * Sanitize column names using normalize_column_name method
     * Get current directory using cur_direc = os.getcwd()
-    * Save preprocessed data to the path. -> "cur_direc/results/{name}/{llm}/preprocessed/"
+    * Save preprocessed data to the path. -> "cur_direc/project/{name}/{llm}/preprocessed/"
     * Save preprocessed data by the name "preprocessed_data.csv"
-    * Save vectorizer to the path -> "cur_direc/results/{name}/{llm}/vectors/"
+    * Save vectorizer to the path -> "cur_direc/project/{name}/{llm}/vectors/"
     * Save vectorizer by the name "vectorizer.pkl"
     * Make sure to create path for preprocessed and vectorizer
     * Include encoding="utf-8" in all file operations
@@ -352,11 +356,11 @@ Specifications:
 
 2. The script should:
     - get curr directory from cur_direc= os.getcwd()
-    - Load preprocessed data from "cur_direc/results/{name}/{llm}/preprocessed/preprocessed_data.csv"
-    - Load vectorizer from 'cur_direc/results/{name}/{llm}/vectors/vectorizer.pkl'
+    - Load preprocessed data from "cur_direc\project\{name}\{llm}\preprocessed\preprocessed_data.csv"
+    - Load vectorizer from 'cur_direc\project\{name}\{llm}\vectors\vectorizer.pkl'
     - Split data into train/validation sets
     - Train model for task: {task}
-    - Save trained model to 'cur_direc/results/{name}/{llm}/trainingmodel/'
+    - Save trained model to 'cur_direc/project/{name}/{llm}/trainingmodel/'
     - Should not have any comments
 
 3. Implementation requirements:
