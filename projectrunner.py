@@ -7,7 +7,7 @@ class ProjectRunner:
         self.llm_used = llm_used
         self.files_to_run = {
             "data_preprocessing.py":None,
-            # "model_training.py": None,
+            "model_training.py": None,
         }
 
     def validate_files(self, llm):

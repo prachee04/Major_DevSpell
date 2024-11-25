@@ -171,7 +171,7 @@ class NLPGenerator:
         project_dirs = self._generate_project_structure(self.name)
 
         # Save dataset to CSV in the dataset directory
-        dataset_path = os.path.join(project_dirs["results"], "test.csv")
+        dataset_path = os.path.join(project_dirs["dataset"], "test.csv")
         df.to_csv(dataset_path, index=False)
 
         # Ensure the results folder exists
@@ -214,7 +214,11 @@ Specifications:
 
     - load_data(self, file_path: str) -> pd.DataFrame:
         try:
-            file_path = os.path.join(os.getcwd(), file_path)
+            
+            file_loc = os.path.join(os.getcwd(), "results")
+            file_loc = os.path.join(file_loc,{name})
+            file_loc = os.path.join(file_loc,{llm})
+            file_loc = os.path.join(file_loc,file_path)
             
             # Detect encoding
             with open(file_path, 'rb') as file:
@@ -235,7 +239,12 @@ Specifications:
             
         except UnicodeDecodeError:
             # Fallback to latin-1
-            file_path = os.path.join(os.getcwd(), file_path)
+            file_loc = os.path.join(os.getcwd(), "results")
+            file_loc = os.path.join(file_loc,{name})
+            file_loc = os.path.join(file_loc,{llm})
+            file_loc = os.path.join(file_loc,"dataset")
+            file_loc = os.path.join(file_loc,file_path)
+            file_path = os.path.join(file_loc, file_path)
             df = pd.read_csv(file_path, encoding='latin-1')
             df = self.validate_columns(df)
             
@@ -267,8 +276,9 @@ Specifications:
     * Process text columns: {columns}
     * Sanitize column names using normalize_column_name method
     * Get current directory using cur_direc = os.getcwd()
-    * Save preprocessed data to the path -> "curr_direct/preprocessed/"
-    * Save vectorizer to the path -> "cur_direc/vectors/"
+    * Save preprocessed data to the path. -> "cur_direc/results/{name}/{llm}/preprocessed/"
+    * Save vectorizer to the path -> "cur_direc/results/{name}/{llm}/vectors/"
+    * Make sure to create path for preprocessed and vectorizer
     * Include encoding="utf-8" in all file operations
     * dataset is stored in the same path by the name of test.csv
 
@@ -306,6 +316,7 @@ Specifications:
     * Handle encoding-related column name mismatches
 
 6. Constraints:
+    * Do not write any comments
     * Should not include anything other than python code
     * No description should be given in the end
     * Handle both UTF-8 and non-UTF-8 encodings
@@ -318,7 +329,9 @@ Specifications:
         code_files["data_preprocessing.py"] = self._generate_code(
             preprocessing_prompt, 
             columns=str(list(df.columns)), 
-            task=nlp_task
+            task=nlp_task,
+            name=self.name,
+            llm=self.model
         )
 
         model_prompt = """
@@ -328,14 +341,17 @@ Specifications:
 
     1. The task is: {task}.
     2. The dataset contains columns: {columns}.
-    3. The dataset should be loaded from "/test.csv".
-    4. The script must include:
+    3. Get current working directory by cur_direc= os.getcwd()
+    4. The preprocessed dataset should be loaded from "cur_direc/results/{name}/{llm}/preprocessed/preprocessed_data.csv".
+    5. The script must include:
         - Implementation of one or more model architectures suited to the task.
-        - A training pipeline with data preprocessing, splitting, model training, and evaluation.
+        - A training pipeline model training
         - Hyperparameter tuning using grid search, random search, or a modern library like Optuna or Hyperopt.
-        - Save the trained model to './results/trained_model.pkl'.
-    5. The script should be runnable directly from the command line.
-    6. Only write the python script. Anything else should be included as python comments.
+        - Save the trained model to path and make sure to create the path if it does not exist 'cur_direc/results/{name}/{llm}/traininedmodel/trained_model.pkl'.
+    6. Only write the python script. 
+    7. Do not write any comments.
+    8. Vectorizer can be loaded from "cur_direc/results/{name}/{llm}/vectors/vectroizer.pkl"
+    9. Save the trained model to 
 
 Code Structure Requirements:
     1. Include a main() function that orchestrates the entire training process.
@@ -362,7 +378,9 @@ Additional Notes:
         code_files["model_training.py"] = self._generate_code(
             model_prompt,
             task=nlp_task,
-            columns=str(list(df.columns))
+            columns=str(list(df.columns)),
+            name= self.name,
+            llm = self.model
         )
 
         # Evaluation Script

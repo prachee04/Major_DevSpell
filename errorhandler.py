@@ -25,16 +25,39 @@ class LLMErrorHandler:
         self.max_retries = max_retries
         self.retry_delay = retry_delay
 
+    def _filter_nltk_messages(self, error_msg: str) -> str:
+        """
+        Filter out NLTK download messages from error output.
+        """
+        # Split the error message into lines
+        lines = error_msg.split('\n')
+        
+        # Filter out NLTK download related messages
+        filtered_lines = [
+            line for line in lines 
+            if not (
+                '[nltk_data]' in line or 
+                'Downloading package' in line or 
+                'Package' in line and 'is already up-to-date!' in line
+            )
+        ]
+        
+        # Rejoin the filtered lines
+        return '\n'.join(filtered_lines).strip()
+
     def parse_error(self, error_msg: str) -> Dict[str, Optional[str]]:
-        file_match = re.search(r'File "([^"]+)"', error_msg)
-        line_match = re.search(r'line (\d+)', error_msg)
-        error_type_match = re.search(r'([A-Za-z.]+Error:?.*?)(?:\n|$)', error_msg)
+        # First filter out NLTK messages
+        filtered_error = self._filter_nltk_messages(error_msg)
+        
+        file_match = re.search(r'File "([^"]+)"', filtered_error)
+        line_match = re.search(r'line (\d+)', filtered_error)
+        error_type_match = re.search(r'([A-Za-z.]+Error:?.*?)(?:\n|$)', filtered_error)
 
         return {
             "file_path": file_match.group(1) if file_match else None,
             "line_number": line_match.group(1) if line_match else None,
             "error_type": error_type_match.group(1) if error_type_match else None,
-            "full_error": error_msg
+            "full_error": filtered_error
         }
 
     def read_file_content(self, file_path: str) -> str:
@@ -44,6 +67,7 @@ class LLMErrorHandler:
         except Exception as e:
             print(f"Error reading file {file_path}: {str(e)}")
             return ""
+
     def _sanitize_output(self, text):
         """
         Extract and return only valid Python code from the text.
@@ -62,6 +86,7 @@ class LLMErrorHandler:
             sanitized_code = re.sub(r"[^a-zA-Z0-9_#:\n\(\)\[\]\{\}.,=+\-*\/<>%&|! ]", "", text)
         
         return sanitized_code.strip()
+
     def update_file(self, file_path: str, new_content: str) -> bool:
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -88,7 +113,7 @@ class LLMErrorHandler:
         for attempt in range(self.max_retries):
             try:
                 print(f"Attempt {attempt + 1}: Sending request to the ChatGPT model...")
-                
+                # print(prompt)
                 response = self.client.chat.completions.create(
                     messages=[
                         {"role": "system", "content": "You are an assistant for debugging Python code."},
@@ -100,9 +125,9 @@ class LLMErrorHandler:
                     top_p=1,
                 )
                 fixed_code = response.choices[0].message.content
-                fixed_code =self._sanitize_output(fixed_code)
+                fixed_code = self._sanitize_output(fixed_code)
                 # Assuming the fixed code is returned in the 'choices[0].message.content'
-                if response :
+                if response:
                     return fixed_code
                 else:
                     print("Error: Invalid response structure.")
@@ -114,5 +139,3 @@ class LLMErrorHandler:
 
         print("Failed to get a fix after all retry attempts.")
         return None
-
-
