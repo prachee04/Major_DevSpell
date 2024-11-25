@@ -4,16 +4,16 @@ import yaml
 from dotenv import load_dotenv
 import importlib
 import pandas as pd
-# import numpy as np
-# import matplotlib as plt
-# import plotly.express as px
+import numpy as np
+import matplotlib as plt
+import plotly.express as px
 import concurrent.futures
 from projectrunner import ProjectRunnerWithErrorHandling 
-# from src.utils.llm_selector import LLMSelector
+from src.utils.llm_selector import LLMSelector
 # from src.evaluators.model_evaluator import ModelEvaluator
 from src.evaluators.recommendation_model_evaluator import RecommendationModelEvaluator
 from errorhandler import LLMErrorHandler
-# from src.code_performance.code_performance_metrics import CodePerformanceAnalysis
+from src.code_performance.code_performance_metrics import CodePerformanceAnalysis
 
 class MLProjectGenerator:
     def __init__(self):
@@ -194,146 +194,161 @@ class MLProjectGenerator:
 
     def display_results(self, projects):
         # Tabs for different views
-        tab1, tab2, tab3 = st.tabs(["Project Details", "Model Performance", "Comparative Metrics"])
+        tab1, tab2, tab3 = st.tabs(["Project Details", "SRS and UML", "Comparative Metrics"])
         
         with tab1:
             st.header("Generated Projects")
             for llm, project in projects.items():
                 st.subheader(f"Project by {llm}")
                 st.json(project)
-        
+                
         with tab2:
-            st.header("Model Evaluation")
-            # Iterate through projects and evaluate models
-            model_metrics = {}
+            st.header("Generated Documentation")
+            
+            # Iterate through projects
+            for llm, project in projects.items():
+                st.subheader(f"Documentation for {project['project_name']} by {llm}")
+                
+                # Check if documentation exists
+                project_output_dir = f"results/{project['project_name']}/{llm}/output/"
+                
+                # List of documentation files to display
+                doc_files = [
+                    ('SRS Document', 'srs_document.md'),
+                    ('Sequence Diagram', 'sequence_diagram.dot'),
+                    ('Activity Diagram', 'activity_diagram.dot'),
+                    ('Class Diagram', 'class_diagram.dot')
+                ]
+                
+                # Create download buttons for each documentation file
+                for file_label, filename in doc_files:
+                    file_path = os.path.join(project_output_dir, filename)
+                    
+                    if os.path.exists(file_path):
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            file_contents = f.read()
+                        
+                        # Download button
+                        st.download_button(
+                            label=f"Download {file_label}",
+                            data=file_contents,
+                            file_name=filename,
+                            mime='text/plain' if filename.endswith('.md') else 'text/dot',
+                            key=f"{llm}_{filename}"
+                        )
+                    else:
+                        st.warning(f"{file_label} not found for {llm}")
+        
+        
+        with tab3:
+            st.header("Code Quality Metrics Across LLMs")
+            
+            metrics_table = []
+            
             for llm, project in projects.items():
                 try:
-                    # Ensure dataset is present and not None
-                    dataset = project.get('dataset')
-                    if dataset is None or (isinstance(dataset, pd.DataFrame) and dataset.empty):
-                        st.warning(f"No valid dataset available for {llm}")
-                        continue
+                    analyzer = CodePerformanceAnalysis(
+                        project_name=project['project_name'],
+                        model_name=llm
+                    )
+                    metrics = analyzer.analyze()
                     
-                    # Create a copy of the project to avoid modifying the original
-                    project_copy = project.copy()
-                    project_copy['dataset'] = dataset
-                    
-                    evaluator = RecommendationModelEvaluator(project_copy)
-                    metrics = evaluator.evaluate_model(model_name='groq_llama3_70b')
                     if metrics:
-                        model_metrics[llm] = metrics
-                except Exception as e:
-                    st.error(f"Error evaluating model for {llm}: {e}")
-        
-        # with tab3:
-        #     st.header("Code Quality Metrics Across LLMs")
-            
-        #     metrics_table = []
-            
-        #     for llm, project in projects.items():
-        #         try:
-        #             analyzer = CodePerformanceAnalysis(
-        #                 project_name=project['project_name'],
-        #                 model_name=llm
-        #             )
-        #             metrics = analyzer.analyze()
-                    
-        #             if metrics:
-        #                 # Add LLM name to metrics
-        #                 metrics_dict = {
-        #                     'LLM': llm,
-        #                     'Lines of Code': metrics['loc'],
-        #                     'Cyclomatic Complexity': metrics['cyclomatic_complexity'],
-        #                     'Maintainability Index': metrics['maintainability_index'],
-        #                     'Comment Ratio (%)': metrics['comment_ratio'],
-        #                     'Function Count': metrics['function_count']
-        #                 }
-        #                 metrics_table.append(metrics_dict)
-        #             else:
-        #                 st.warning(f"No code metrics available for {llm}")
+                        # Add LLM name to metrics
+                        metrics_dict = {
+                            'LLM': llm,
+                            'Lines of Code': metrics['loc'],
+                            'Cyclomatic Complexity': metrics['cyclomatic_complexity'],
+                            'Maintainability Index': metrics['maintainability_index'],
+                            'Comment Ratio (%)': metrics['comment_ratio'],
+                            'Function Count': metrics['function_count']
+                        }
+                        metrics_table.append(metrics_dict)
+                    else:
+                        st.warning(f"No code metrics available for {llm}")
                         
-        #         except Exception as e:
-        #             st.error(f"Error analyzing code metrics for {llm}: {str(e)}")
-        #             st.error(f"Project path being checked: results/{project['project_name']}/{llm}/results/")
+                except Exception as e:
+                    st.error(f"Error analyzing code metrics for {llm}: {str(e)}")
+                    st.error(f"Project path being checked: results/{project['project_name']}/{llm}/results/")
             
-        #     if metrics_table:
-        #         df_metrics = pd.DataFrame(metrics_table)
+            if metrics_table:
+                df_metrics = pd.DataFrame(metrics_table)
                 
-        #         # Reorder columns to put LLM first
-        #         cols = ['LLM'] + [col for col in df_metrics.columns if col != 'LLM']
-        #         df_metrics = df_metrics[cols]
+                # Reorder columns to put LLM first
+                cols = ['LLM'] + [col for col in df_metrics.columns if col != 'LLM']
+                df_metrics = df_metrics[cols]
                 
-        #         # Display metrics table
-        #         st.subheader("Code Quality Metrics Comparison")
-        #         st.table(df_metrics)
+                # Display metrics table
+                st.subheader("Code Quality Metrics Comparison")
+                st.table(df_metrics)
                 
-        #         # Create visualizations
-        #         st.subheader("Metrics Visualization")
+                # Create visualizations
+                st.subheader("Metrics Visualization")
                 
-        #         # Bar chart for Lines of Code comparison
-        #         loc_chart = px.bar(df_metrics, x='LLM', y='Lines of Code', 
-        #                         title='Lines of Code Comparison',
-        #                         color='LLM')
-        #         st.plotly_chart(loc_chart)
+                # Bar chart for Lines of Code comparison
+                loc_chart = px.bar(df_metrics, x='LLM', y='Lines of Code', 
+                                title='Lines of Code Comparison',
+                                color='LLM')
+                st.plotly_chart(loc_chart)
                 
-        #         # Bar chart for Cyclomatic Complexity
-        #         cc_chart = px.bar(df_metrics, x='LLM', y='Cyclomatic Complexity',
-        #                         title='Cyclomatic Complexity Comparison',
-        #                         color='LLM')
-        #         st.plotly_chart(cc_chart)
+                # Bar chart for Cyclomatic Complexity
+                cc_chart = px.bar(df_metrics, x='LLM', y='Cyclomatic Complexity',
+                                title='Cyclomatic Complexity Comparison',
+                                color='LLM')
+                st.plotly_chart(cc_chart)
                 
-        #         # Bar chart for Maintainability Index
-        #         mi_chart = px.bar(df_metrics, x='LLM', y='Maintainability Index',
-        #                         title='Maintainability Index Comparison',
-        #                         color='LLM')
-        #         st.plotly_chart(mi_chart)
+                # Bar chart for Maintainability Index
+                mi_chart = px.bar(df_metrics, x='LLM', y='Maintainability Index',
+                                title='Maintainability Index Comparison',
+                                color='LLM')
+                st.plotly_chart(mi_chart)
                 
-        #         # Bar chart for Comment Ratio
-        #         cr_chart = px.bar(df_metrics, x='LLM', y='Comment Ratio (%)',
-        #                         title='Comment Ratio Comparison',
-        #                         color='LLM')
-        #         st.plotly_chart(cr_chart)
+                # Bar chart for Comment Ratio
+                cr_chart = px.bar(df_metrics, x='LLM', y='Comment Ratio (%)',
+                                title='Comment Ratio Comparison',
+                                color='LLM')
+                st.plotly_chart(cr_chart)
                 
-        #         # Bar chart for Function Count
-        #         fc_chart = px.bar(df_metrics, x='LLM', y='Function Count',
-        #                         title='Function Count Comparison',
-        #                         color='LLM')
-        #         st.plotly_chart(fc_chart)
+                # Bar chart for Function Count
+                fc_chart = px.bar(df_metrics, x='LLM', y='Function Count',
+                                title='Function Count Comparison',
+                                color='LLM')
+                st.plotly_chart(fc_chart)
                 
-        #         # Add interpretations
-        #         st.subheader("Metrics Interpretation")
-        #         st.markdown("""
-        #         - **Lines of Code (LOC)**: Measures the size of the codebase. Lower values indicate more concise code, but should be balanced with readability.
+                # Add interpretations
+                st.subheader("Metrics Interpretation")
+                st.markdown("""
+                - **Lines of Code (LOC)**: Measures the size of the codebase. Lower values indicate more concise code, but should be balanced with readability.
                 
-        #         - **Cyclomatic Complexity**: Measures the number of linearly independent paths through the code. Lower values (typically <10) indicate simpler, more maintainable code.
+                - **Cyclomatic Complexity**: Measures the number of linearly independent paths through the code. Lower values (typically <10) indicate simpler, more maintainable code.
                 
-        #         - **Maintainability Index**: Indicates how maintainable the code is on a scale of 0-100. Higher values indicate more maintainable code:
-        #             - 20-100: Good maintainability
-        #             - 10-19: Moderate maintainability
-        #             - 0-9: Difficult to maintain
+                - **Maintainability Index**: Indicates how maintainable the code is on a scale of 0-100. Higher values indicate more maintainable code:
+                    - 20-100: Good maintainability
+                    - 10-19: Moderate maintainability
+                    - 0-9: Difficult to maintain
                 
-        #         - **Comment Ratio (%)**: Percentage of comments in the code. A good balance (15-30%) suggests well-documented code without being overly verbose.
+                - **Comment Ratio (%)**: Percentage of comments in the code. A good balance (15-30%) suggests well-documented code without being overly verbose.
                 
-        #         - **Function Count**: Number of functions in the codebase. This indicates code modularity but should be balanced with function size and complexity.
-        #         """)
+                - **Function Count**: Number of functions in the codebase. This indicates code modularity but should be balanced with function size and complexity.
+                """)
                 
-        #         # Add overall analysis
-        #         st.subheader("Overall Analysis")
+                # Add overall analysis
+                st.subheader("Overall Analysis")
                 
-        #         # Find best performing LLM for each metric
-        #         best_loc = df_metrics.loc[df_metrics['Lines of Code'].idxmin()]['LLM']
-        #         best_cc = df_metrics.loc[df_metrics['Cyclomatic Complexity'].idxmin()]['LLM']
-        #         best_mi = df_metrics.loc[df_metrics['Maintainability Index'].idxmax()]['LLM']
+                # Find best performing LLM for each metric
+                best_loc = df_metrics.loc[df_metrics['Lines of Code'].idxmin()]['LLM']
+                best_cc = df_metrics.loc[df_metrics['Cyclomatic Complexity'].idxmin()]['LLM']
+                best_mi = df_metrics.loc[df_metrics['Maintainability Index'].idxmax()]['LLM']
                 
-        #         st.markdown(f"""
-        #         Based on the metrics above:
-        #         - Most concise code: **{best_loc}**
-        #         - Least complex code: **{best_cc}**
-        #         - Most maintainable code: **{best_mi}**
-        #         """)
+                st.markdown(f"""
+                Based on the metrics above:
+                - Most concise code: **{best_loc}**
+                - Least complex code: **{best_cc}**
+                - Most maintainable code: **{best_mi}**
+                """)
                 
-        #     else:
-        #         st.warning("No metrics available for comparison. Please ensure code files are generated in the correct project directories.")
+            else:
+                st.warning("No metrics available for comparison. Please ensure code files are generated in the correct project directories.")
        
 
         

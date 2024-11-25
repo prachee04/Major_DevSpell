@@ -24,6 +24,7 @@ langchain>=0.1.11
 langchain_groq>=0.0.6
 langchain_community>=0.0.24
 langchain_core>=0.1.30
+graphviz
 
 # Evaluation and Metrics
 scikit-learn
