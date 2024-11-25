@@ -105,6 +105,7 @@ class LLMErrorHandler:
         Error Type: {error_info['error_type']}
         Full Error:
         {error_info['full_error']}
+      
         Current code:
         {file_content}
         Provide only the complete fixed code, ready to save to a file.
@@ -113,7 +114,9 @@ class LLMErrorHandler:
         for attempt in range(self.max_retries):
             try:
                 print(f"Attempt {attempt + 1}: Sending request to the ChatGPT model...")
-                print(prompt)
+                # print(error_info['error_type'])
+                # print(prompt)
+                # print(error_info['error_type'])
                 response = self.client.chat.completions.create(
                     messages=[
                         {"role": "system", "content": "You are an assistant for debugging Python code."},

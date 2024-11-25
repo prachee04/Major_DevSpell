@@ -82,7 +82,7 @@ class ProjectRunnerWithErrorHandling(ProjectRunner):
                     return False
                 
                 # Read the current file content
-                file_content = self.error_handler.read_file_content(error_info["file_path"])
+                file_content = self.error_handler.read_file_content(script_path)
                 if not file_content:
                     return False
                 
@@ -93,7 +93,7 @@ class ProjectRunnerWithErrorHandling(ProjectRunner):
                     return False
                 
                 # Update the file with the fix
-                if not self.error_handler.update_file(error_info["file_path"], fixed_code):
+                if not self.error_handler.update_file(script_path, fixed_code):
                     return False
                 
                 print(f"\nAttempted fix for {script_path}. Retrying execution...")

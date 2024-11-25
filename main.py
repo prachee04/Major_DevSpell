@@ -4,15 +4,17 @@ import yaml
 from dotenv import load_dotenv
 import importlib
 import pandas as pd
-import numpy as np
-import matplotlib as plt
+# import numpy as np
+# import matplotlib as plt
+# import plotly.express as px
 import concurrent.futures
 from projectrunner import ProjectRunnerWithErrorHandling 
-# Import LLMSelector and ModelEvaluator (Make sure these paths are correct based on your folder structure)
-from src.utils.llm_selector import LLMSelector
-from src.evaluators.model_evaluator import ModelEvaluator
+# from src.utils.llm_selector import LLMSelector
+# from src.evaluators.model_evaluator import ModelEvaluator
 from src.evaluators.recommendation_model_evaluator import RecommendationModelEvaluator
 from errorhandler import LLMErrorHandler
+# from src.code_performance.code_performance_metrics import CodePerformanceAnalysis
+
 class MLProjectGenerator:
     def __init__(self):
         # Load environment variables
@@ -31,7 +33,7 @@ class MLProjectGenerator:
         # self.llm_selector = LLMSelector(self.config['llm_providers'])
         
         # Initialize Model Evaluator
-        self.model_evaluator = ModelEvaluator()
+        # self.model_evaluator = ModelEvaluator()
         
         # Initialize empty generator dictionary for lazy loading
         self.generators = {}
@@ -40,7 +42,7 @@ class MLProjectGenerator:
         """Lazy load the generators to avoid circular import issues."""
         if not self.generators:  # Only load if not already loaded
             # Dynamically import the generator classes using importlib
-            RecommendationGenerator = importlib.import_module('src.generators.recommendation_generator')
+            
             TimeSeriesGenerator = importlib.import_module('src.generators.time_series_generator')
             NLPGenerator = importlib.import_module('src.generators.nlp_generator')
             ClassificationGenerator = importlib.import_module('src.generators.classification_generator')
@@ -49,7 +51,7 @@ class MLProjectGenerator:
 
             # Initialize Generators with Groq API Key for relevant generators
             self.generators = {
-                'Recommendation Systems': RecommendationGenerator.RecommendationGenerator,
+
                 'Time Series Analysis': TimeSeriesGenerator.TimeSeriesGenerator,
                 'Natural Language Processing': NLPGenerator.NLPGenerator,
                 'Classification': ClassificationGenerator.ClassificationGenerator,
@@ -222,6 +224,118 @@ class MLProjectGenerator:
                         model_metrics[llm] = metrics
                 except Exception as e:
                     st.error(f"Error evaluating model for {llm}: {e}")
+        
+        # with tab3:
+        #     st.header("Code Quality Metrics Across LLMs")
+            
+        #     metrics_table = []
+            
+        #     for llm, project in projects.items():
+        #         try:
+        #             analyzer = CodePerformanceAnalysis(
+        #                 project_name=project['project_name'],
+        #                 model_name=llm
+        #             )
+        #             metrics = analyzer.analyze()
+                    
+        #             if metrics:
+        #                 # Add LLM name to metrics
+        #                 metrics_dict = {
+        #                     'LLM': llm,
+        #                     'Lines of Code': metrics['loc'],
+        #                     'Cyclomatic Complexity': metrics['cyclomatic_complexity'],
+        #                     'Maintainability Index': metrics['maintainability_index'],
+        #                     'Comment Ratio (%)': metrics['comment_ratio'],
+        #                     'Function Count': metrics['function_count']
+        #                 }
+        #                 metrics_table.append(metrics_dict)
+        #             else:
+        #                 st.warning(f"No code metrics available for {llm}")
+                        
+        #         except Exception as e:
+        #             st.error(f"Error analyzing code metrics for {llm}: {str(e)}")
+        #             st.error(f"Project path being checked: results/{project['project_name']}/{llm}/results/")
+            
+        #     if metrics_table:
+        #         df_metrics = pd.DataFrame(metrics_table)
+                
+        #         # Reorder columns to put LLM first
+        #         cols = ['LLM'] + [col for col in df_metrics.columns if col != 'LLM']
+        #         df_metrics = df_metrics[cols]
+                
+        #         # Display metrics table
+        #         st.subheader("Code Quality Metrics Comparison")
+        #         st.table(df_metrics)
+                
+        #         # Create visualizations
+        #         st.subheader("Metrics Visualization")
+                
+        #         # Bar chart for Lines of Code comparison
+        #         loc_chart = px.bar(df_metrics, x='LLM', y='Lines of Code', 
+        #                         title='Lines of Code Comparison',
+        #                         color='LLM')
+        #         st.plotly_chart(loc_chart)
+                
+        #         # Bar chart for Cyclomatic Complexity
+        #         cc_chart = px.bar(df_metrics, x='LLM', y='Cyclomatic Complexity',
+        #                         title='Cyclomatic Complexity Comparison',
+        #                         color='LLM')
+        #         st.plotly_chart(cc_chart)
+                
+        #         # Bar chart for Maintainability Index
+        #         mi_chart = px.bar(df_metrics, x='LLM', y='Maintainability Index',
+        #                         title='Maintainability Index Comparison',
+        #                         color='LLM')
+        #         st.plotly_chart(mi_chart)
+                
+        #         # Bar chart for Comment Ratio
+        #         cr_chart = px.bar(df_metrics, x='LLM', y='Comment Ratio (%)',
+        #                         title='Comment Ratio Comparison',
+        #                         color='LLM')
+        #         st.plotly_chart(cr_chart)
+                
+        #         # Bar chart for Function Count
+        #         fc_chart = px.bar(df_metrics, x='LLM', y='Function Count',
+        #                         title='Function Count Comparison',
+        #                         color='LLM')
+        #         st.plotly_chart(fc_chart)
+                
+        #         # Add interpretations
+        #         st.subheader("Metrics Interpretation")
+        #         st.markdown("""
+        #         - **Lines of Code (LOC)**: Measures the size of the codebase. Lower values indicate more concise code, but should be balanced with readability.
+                
+        #         - **Cyclomatic Complexity**: Measures the number of linearly independent paths through the code. Lower values (typically <10) indicate simpler, more maintainable code.
+                
+        #         - **Maintainability Index**: Indicates how maintainable the code is on a scale of 0-100. Higher values indicate more maintainable code:
+        #             - 20-100: Good maintainability
+        #             - 10-19: Moderate maintainability
+        #             - 0-9: Difficult to maintain
+                
+        #         - **Comment Ratio (%)**: Percentage of comments in the code. A good balance (15-30%) suggests well-documented code without being overly verbose.
+                
+        #         - **Function Count**: Number of functions in the codebase. This indicates code modularity but should be balanced with function size and complexity.
+        #         """)
+                
+        #         # Add overall analysis
+        #         st.subheader("Overall Analysis")
+                
+        #         # Find best performing LLM for each metric
+        #         best_loc = df_metrics.loc[df_metrics['Lines of Code'].idxmin()]['LLM']
+        #         best_cc = df_metrics.loc[df_metrics['Cyclomatic Complexity'].idxmin()]['LLM']
+        #         best_mi = df_metrics.loc[df_metrics['Maintainability Index'].idxmax()]['LLM']
+                
+        #         st.markdown(f"""
+        #         Based on the metrics above:
+        #         - Most concise code: **{best_loc}**
+        #         - Least complex code: **{best_cc}**
+        #         - Most maintainable code: **{best_mi}**
+        #         """)
+                
+        #     else:
+        #         st.warning("No metrics available for comparison. Please ensure code files are generated in the correct project directories.")
+       
+
         
     def visualize_results(self, results):
         # Detailed visualization of results

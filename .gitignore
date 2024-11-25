@@ -2,7 +2,8 @@
 venv/
 *.venv
 .venv/
-results
+project
+project/
 # Environment Files
 .env
 *.env
