@@ -218,7 +218,7 @@ Specifications:
             file_loc = os.path.join(os.getcwd(), "results")
             file_loc = os.path.join(file_loc,{name})
             file_loc = os.path.join(file_loc,{llm})
-            file_loc = os.path.join(file_loc,file_path)
+            file_loc = os.path.join(file_loc,"dataset",file_path)
             
             # Detect encoding
             with open(file_path, 'rb') as file:
@@ -335,45 +335,39 @@ Specifications:
         )
 
         model_prompt = """
-You are a seasoned machine learning engineer with expertise in designing and implementing end-to-end ML pipelines. Your task is to generate a Python script for building a machine learning model.
+You are an ML engineer creating a training script for {task} task. Generate a Python script that implements model training pipeline.
 
 Specifications:
 
-    1. The task is: {task}.
-    2. The dataset contains columns: {columns}.
-    3. Get current working directory by cur_direc= os.getcwd()
-    4. The preprocessed dataset should be loaded from "cur_direc/results/{name}/{llm}/preprocessed/preprocessed_data.csv".
-    5. The script must include:
-        - Implementation of one or more model architectures suited to the task.
-        - A training pipeline model training
-        - Hyperparameter tuning using grid search, random search, or a modern library like Optuna or Hyperopt.
-        - Save the trained model to path and make sure to create the path if it does not exist 'cur_direc/results/{name}/{llm}/traininedmodel/trained_model.pkl'.
-    6. Only write the python script. 
-    7. Do not write any comments.
-    8. Vectorizer can be loaded from "cur_direc/results/{name}/{llm}/vectors/vectroizer.pkl"
-    9. Save the trained model to 
+1. Create a ModelTrainer class with methods:
+    - init(self, config: Dict[str, Any])
+    - load_preprocessed_data(self, data_path: str) -> Tuple[np.ndarray, np.ndarray]
+    - load_vectorizer(self, vectorizer_path: str) -> None
+    - split_data(self, X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+    - initialize_model(self) -> Any
+    - train_model(self, X_train: np.ndarray, y_train: np.ndarray) -> None
+    - save_model(self, save_path: str) -> None
+    - save_metrics(self, metrics: Dict[str, float], save_path: str) -> None
 
-Code Structure Requirements:
-    1. Include a main() function that orchestrates the entire training process.
-    2. Use proper error handling for file operations.
-    
+2. The script should:
+    - get curr directory from cur_direc= os.getcwd()
+    - Load preprocessed data from "cur_direc/results/{name}/{llm}/preprocessed/preprocessed_data.csv"
+    - Load vectorizer from 'cur_direc/results/{name}/{llm}/vectors/vectorizer.txt'
+    - Split data into train/validation sets
+    - Train model for task: {task}
+    - Save trained model to 'cur_direc/results/{name}/{llm}/trainingmodel/'
+    - Save training metrics to 'cur_direc/results/{name}/{llm}/trainingmetrics/'
 
-Constraints:
+3. Implementation requirements:
+    - Use appropriate model for {task} task
+    - Implement early stopping
+    - Add model checkpointing
+    - Save training configuration
 
-    1. Provide only the Python script; any explanation or non-code instructions should appear as comments within the code.
-    2. Do not include any start or end markers for the code (e.g., ```python or ```).
-    3. The code must be modular, clean, and include function definitions for key steps to ensure reusability.
-    4. All file paths should be relative to the script's location in the results directory.
-
-Additional Notes:
-
-    1. Select appropriate machine learning libraries (e.g., scikit-learn, TensorFlow, PyTorch) based on the task's requirements.
-    2. Optimize for clarity and usability, making the script easy to understand and adapt.
-    3. Include clear logging statements to track the training progress.
-    4. Use relative imports for any custom modules from data_preprocessing.py.
-    5. Do not include anything other than python code.
-
+4. Main function should:
+    - Initialize and run training pipeline
 """
+
 
         code_files["model_training.py"] = self._generate_code(
             model_prompt,

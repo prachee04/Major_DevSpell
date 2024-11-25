@@ -11,7 +11,7 @@ from openai import OpenAI
 load_dotenv()
 
 class LLMErrorHandler:
-    def __init__(self, llm_model: str, max_retries: int = 3, retry_delay: int = 2):
+    def __init__(self, llm_model: str, max_retries: int = 5, retry_delay: int = 2):
         self.client = OpenAI(
             base_url="https://models.inference.ai.azure.com",
             api_key=os.environ["GITHUB_TOKEN"],
@@ -113,7 +113,7 @@ class LLMErrorHandler:
         for attempt in range(self.max_retries):
             try:
                 print(f"Attempt {attempt + 1}: Sending request to the ChatGPT model...")
-                # print(prompt)
+                print(prompt)
                 response = self.client.chat.completions.create(
                     messages=[
                         {"role": "system", "content": "You are an assistant for debugging Python code."},
@@ -126,6 +126,7 @@ class LLMErrorHandler:
                 )
                 fixed_code = response.choices[0].message.content
                 fixed_code = self._sanitize_output(fixed_code)
+                print(fixed_code)
                 # Assuming the fixed code is returned in the 'choices[0].message.content'
                 if response:
                     return fixed_code
