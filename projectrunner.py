@@ -113,7 +113,7 @@ class ProjectRunnerWithErrorHandling(ProjectRunner):
 
             print("Running scripts in sequence...")
             for script_name, script_path in self.files_to_run.items():
-                print(f"\nRunning {script_name} for LLM '{llm}'...")
+                print(f"\nRunning {script_name} for LLM '{llm}' in {script_path}...")
                 if not self.run_script(script_path):
-                    print(f"Failed to successfully run {script_name} for LLM '{llm}'. Skipping remaining scripts.")
+                    print(f"Failed to successfully run {script_name} for LLM '{llm} in {script_path}'. Skipping remaining scripts.")
                     break
