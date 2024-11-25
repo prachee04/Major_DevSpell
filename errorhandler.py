@@ -11,7 +11,7 @@ from openai import OpenAI
 load_dotenv()
 
 class LLMErrorHandler:
-    def __init__(self, llm_model: str, max_retries: int = 5, retry_delay: int = 2):
+    def __init__(self, llm_model: str, max_retries: int = 2, retry_delay: int = 2):
         self.client = OpenAI(
             base_url="https://models.inference.ai.azure.com",
             api_key=os.environ["GITHUB_TOKEN"],
@@ -103,20 +103,21 @@ class LLMErrorHandler:
         prompt = f"""
         Fix the following Python code that produced this error:
         Error Type: {error_info['error_type']}
-        Full Error:
-        {error_info['full_error']}
         Current code:
         {file_content}
         Provide only the complete fixed code, ready to save to a file.
+        Do not add any comments
         """
 
         for attempt in range(self.max_retries):
             try:
                 print(f"Attempt {attempt + 1}: Sending request to the ChatGPT model...")
+                # print(error_info['error_type'])
                 print(prompt)
+                # print(error_info['error_type'])
                 response = self.client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "You are an assistant for debugging Python code."},
+                        {"role": "system", "content": "You are an expert ai/ml developer for debugging Python code."},
                         {"role": "user", "content": prompt}
                     ],
                     model="gpt-4o",
@@ -126,7 +127,7 @@ class LLMErrorHandler:
                 )
                 fixed_code = response.choices[0].message.content
                 fixed_code = self._sanitize_output(fixed_code)
-                print(fixed_code)
+                # print(fixed_code)
                 # Assuming the fixed code is returned in the 'choices[0].message.content'
                 if response:
                     return fixed_code

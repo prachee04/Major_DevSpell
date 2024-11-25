@@ -277,7 +277,9 @@ Specifications:
     * Sanitize column names using normalize_column_name method
     * Get current directory using cur_direc = os.getcwd()
     * Save preprocessed data to the path. -> "cur_direc/results/{name}/{llm}/preprocessed/"
+    * Save preprocessed data by the name "preprocessed_data.csv"
     * Save vectorizer to the path -> "cur_direc/results/{name}/{llm}/vectors/"
+    * Save vectorizer by the name "vectorizer.pkl"
     * Make sure to create path for preprocessed and vectorizer
     * Include encoding="utf-8" in all file operations
     * dataset is stored in the same path by the name of test.csv
@@ -347,16 +349,15 @@ Specifications:
     - initialize_model(self) -> Any
     - train_model(self, X_train: np.ndarray, y_train: np.ndarray) -> None
     - save_model(self, save_path: str) -> None
-    - save_metrics(self, metrics: Dict[str, float], save_path: str) -> None
 
 2. The script should:
     - get curr directory from cur_direc= os.getcwd()
     - Load preprocessed data from "cur_direc/results/{name}/{llm}/preprocessed/preprocessed_data.csv"
-    - Load vectorizer from 'cur_direc/results/{name}/{llm}/vectors/vectorizer.txt'
+    - Load vectorizer from 'cur_direc/results/{name}/{llm}/vectors/vectorizer.pkl'
     - Split data into train/validation sets
     - Train model for task: {task}
     - Save trained model to 'cur_direc/results/{name}/{llm}/trainingmodel/'
-    - Save training metrics to 'cur_direc/results/{name}/{llm}/trainingmetrics/'
+    - Should not have any comments
 
 3. Implementation requirements:
     - Use appropriate model for {task} task
@@ -366,6 +367,11 @@ Specifications:
 
 4. Main function should:
     - Initialize and run training pipeline
+5. Updated code: 
+    instead of import from tensorflow.keras.wrappers use import from scikeras.wrappers
+    Make sure while importing kerasclassifers 
+
+
 """
 
 
