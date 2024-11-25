@@ -14,6 +14,8 @@ from src.utils.llm_selector import LLMSelector
 from src.evaluators.recommendation_model_evaluator import RecommendationModelEvaluator
 from errorhandler import LLMErrorHandler
 from src.code_performance.code_performance_metrics import CodePerformanceAnalysis
+from documentgenerator import DocumentGenerator
+
 
 class MLProjectGenerator:
     def __init__(self):
@@ -187,6 +189,18 @@ class MLProjectGenerator:
                 'dataset': dataset,
                 'llm': llm
             })
+
+            doc_generator = DocumentGenerator(groq_api_key=self.groq_api_key, model_name=llm)
+            documents = doc_generator.generate_documentation({
+                'project_name': project_name,
+                'model_name': llm,
+                'columns': list(dataset.columns) if isinstance(dataset, pd.DataFrame) else [],
+                'nlp_task': project.get('nlp_task', 'Undefined NLP Task'),
+            })
+
+            # Add generated documents to the project
+            project['documents'] = documents
+
             return llm, project
         except Exception as e:
             st.error(f"Error generating project for {llm}: {e}")
@@ -204,13 +218,13 @@ class MLProjectGenerator:
                 
         with tab2:
             st.header("Generated Documentation")
-            
+
             # Iterate through projects
             for llm, project in projects.items():
                 st.subheader(f"Documentation for {project['project_name']} by {llm}")
-                
-                # Check if documentation exists
-                project_output_dir = f"results/{project['project_name']}/{llm}/output/"
+
+                # Corrected path to results directory
+                project_output_dir = f"project/{project['project_name']}/{llm}/results/"
                 
                 # List of documentation files to display
                 doc_files = [
@@ -219,8 +233,7 @@ class MLProjectGenerator:
                     ('Activity Diagram', 'activity_diagram.dot'),
                     ('Class Diagram', 'class_diagram.dot')
                 ]
-                
-                # Create download buttons for each documentation file
+
                 for file_label, filename in doc_files:
                     file_path = os.path.join(project_output_dir, filename)
                     
@@ -228,16 +241,17 @@ class MLProjectGenerator:
                         with open(file_path, 'r', encoding='utf-8') as f:
                             file_contents = f.read()
                         
-                        # Download button
-                        st.download_button(
-                            label=f"Download {file_label}",
-                            data=file_contents,
-                            file_name=filename,
-                            mime='text/plain' if filename.endswith('.md') else 'text/dot',
-                            key=f"{llm}_{filename}"
-                        )
+                        if filename.endswith('.md'):
+                            # Display Markdown content for SRS Document
+                            st.markdown(f"### {file_label}")
+                            st.markdown(file_contents)
+                        elif filename.endswith('.dot'):
+                            # Render Graphviz diagrams
+                            st.markdown(f"### {file_label}")
+                            st.graphviz_chart(file_contents)
                     else:
                         st.warning(f"{file_label} not found for {llm}")
+
         
         
         with tab3:
